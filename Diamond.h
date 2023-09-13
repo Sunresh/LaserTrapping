@@ -4,11 +4,14 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include "preference.h"
+
 using namespace std;
 
 class Diamond {
 private:
 	const std::string filename = "diamond.csv";
+	Pref pr;
 public:
 	Diamond();
 	~Diamond();

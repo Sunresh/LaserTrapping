@@ -4,6 +4,7 @@
 #include "preference.h"
 #include <conio.h>
 #include "cameraonly.h"   
+#include "Only.h"   
 
 class MainWindow {
 public:
@@ -11,7 +12,8 @@ public:
 	double durationInSeconds = 2;
 	double pztvolt = 0;
 	double thContrast = 0;
-	std::vector<UserPreferences> storedPreferences = readFromCSV(filename);
+	Pref pr;
+	std::vector<UserPreferences> storedPreferences = pr.readFromCSV(filename);
 	MainWindow() {
 		system("cls");
 		for (const UserPreferences& prefs : storedPreferences) {
@@ -52,7 +54,7 @@ public:
 		while (true) {
 			key = _getch();
 			if (key == 'e' || key == 'E') {
-				getPrefToCSV(filename);
+				pr.app(filename);
 				break;
 			}
 			if (key == 'c') {
@@ -64,6 +66,12 @@ public:
 			if (key == 'k') {
 				Deposition dia;
 				std::thread ddaa(&Deposition::application, &dia);
+				ddaa.join();
+				break;
+			}
+			if (key == 'o') {
+				Depositi dia;
+				std::thread ddaa(&Depositi::camra, &dia);
 				ddaa.join();
 				break;
 			}

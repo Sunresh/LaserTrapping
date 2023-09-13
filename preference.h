@@ -3,7 +3,6 @@
 
 #include <string>
 #include <vector>
-
 struct UserPreferences {
 	std::string name;
 	double left;
@@ -13,11 +12,17 @@ struct UserPreferences {
 	int time;
 	std::string favoriteColor;
 };
+class Pref{
+public:
+	void getPrefToCSV(const std::string& filename);
+	std::vector<UserPreferences> readFromCSV(const std::string& filename);
+	bool isNumeric(const std::string& str);
+	void getUserInput(const std::string& fieldName, int& field);
+	void getUserInput(const std::string& fieldName, double& field);
+	void saveCSV(const std::string& filename, const UserPreferences& userPrefs);
+	bool loadCSV(const std::string& filename, UserPreferences& userPrefs);
+	void app(const std::string& filename);
 
-void getPrefToCSV(const std::string& filename);
-std::vector<UserPreferences> readFromCSV(const std::string& filename);
-bool isNumeric(const std::string& str);
-
-
+};
 
 #endif // PREFERENCE_H

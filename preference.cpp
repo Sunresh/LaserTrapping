@@ -3,10 +3,12 @@
 #include <iostream>
 #include <sstream>
 #include <vector>
-#include "preference.h" 
+#include "preference.h"
+#include <conio.h>
+
 using namespace std;
 
-bool isNumeric(const std::string& str) {
+bool Pref::isNumeric(const std::string& str) {
 	for (char c : str) {
 		if (!std::isdigit(c) && c != '.' && c != '-') {
 			return false;
@@ -15,59 +17,30 @@ bool isNumeric(const std::string& str) {
 	return true;
 }
 
-void updateDepositionTime(UserPreferences& userPrefs) {
+void Pref::getUserInput(const std::string& fieldName, int& field) {
 	std::string input;
-
-	std::cout << "Enter new time of deposition: ";
+	std::cout << "Enter " << fieldName << ": ";
 	std::cin >> input;
+
 	if (!isNumeric(input)) {
-		std::cerr << "Error: Time of deposition must be a numeric value." << std::endl;
+		std::cerr << "Error: " << fieldName << " must be a numeric value." << std::endl;
 		return;
 	}
-	else {
-		userPrefs.time = std::stoi(input);
+	field = std::stoi(input);
+}
+void Pref::getUserInput(const std::string& fieldName, double& field) {
+	std::string input;
+	std::cout << "Enter " << fieldName << ": ";
+	std::cin >> input;
+
+	if (!isNumeric(input)) {
+		std::cerr << "Error: " << fieldName << " must be a numeric value." << std::endl;
+		return;
 	}
+	field = std::stod(input);
 }
 
-void saveCSV(const std::string& filename, const std::string& itemName, const std::string& itemValue) {
-	UserPreferences userPrefs;
-	std::string input;
-
-	std::vector<UserPreferences> storedP = readFromCSV(filename);
-	for (const UserPreferences& prefs : storedP) {
-		userPrefs.threshold = prefs.voltage;
-	}
-
-	std::cout << itemName;
-	std::cin >> input;
-	if (!isNumeric(input)) {
-		std::cerr << "Error: Voltage must be a numeric value." << std::endl;
-		return;
-	}
-	else {
-		userPrefs.itemValue = std::stoi(input);
-	}
-
-	std::ofstream outFile(filename, std::ios::trunc);
-	if (!outFile.is_open()) {
-		std::cerr << "Error opening file for writing." << std::endl;
-		return;
-	}
-	// Write the preferences to the CSV file
-	outFile
-		<< userPrefs.voltage
-		<< ","
-		<< userPrefs.threshold
-		<< ","
-		<< userPrefs.time
-		<< ","
-		<< userPrefs.left
-		<< ","
-		<< userPrefs.top
-		<< "\n";
-	outFile.close();
-}
-void getPrefToCSV(const std::string& filename) {
+void Pref::getPrefToCSV(const std::string& filename) {
 	UserPreferences userPrefs;
 	std::string input;
 
@@ -145,7 +118,7 @@ void getPrefToCSV(const std::string& filename) {
 	outFile.close();
 }
 
-std::vector<UserPreferences> readFromCSV(const std::string& filename) {
+std::vector<UserPreferences> Pref::readFromCSV(const std::string& filename) {
 	try{
 		std::vector<UserPreferences> preferences;
 		std::ifstream inFile(filename);
@@ -185,4 +158,105 @@ std::vector<UserPreferences> readFromCSV(const std::string& filename) {
 	catch (int a) {
 	
 	};
+}
+
+void Pref::saveCSV(const std::string& filename, const UserPreferences& userPrefs) {
+	std::ofstream outFile(filename);
+	if (!outFile.is_open()) {
+		std::cerr << "Error opening file for writing." << std::endl;
+		return;
+	}
+
+	// Write the preferences to the file with commas
+	outFile
+		<< userPrefs.voltage << ","
+		<< userPrefs.threshold << ","
+		<< userPrefs.time << ","
+		<< userPrefs.left << ","
+		<< userPrefs.top;
+	outFile.close();
+}
+
+bool Pref::loadCSV(const std::string& filename, UserPreferences& userPrefs) {
+	std::ifstream inFile(filename);
+	if (!inFile.is_open()) {
+		return false; // File doesn't exist or cannot be opened; use default values
+	}
+
+	std::string line;
+	std::getline(inFile, line);
+
+	// Split the line into values using commas
+	std::istringstream ss(line);
+	std::string value;
+	getline(ss, value, ',');
+	userPrefs.voltage = std::stoi(value);
+	getline(ss, value, ',');
+	userPrefs.threshold = std::stod(value);
+	getline(ss, value, ',');
+	userPrefs.time = std::stoi(value);
+	getline(ss, value, ',');
+	userPrefs.left = std::stoi(value);
+	getline(ss, value, ',');
+	userPrefs.top = std::stoi(value);
+
+	inFile.close();
+	return true;
+}
+
+void Pref::app(const std::string& filename) {
+	UserPreferences userPrefs;
+	// Load preferences from a file or create it with default values
+	if (!loadCSV(filename, userPrefs)) {
+		std::cerr << "No preferences found or error reading preferences. Creating with default values." << std::endl;
+	}
+	else {
+		loadCSV(filename, userPrefs);
+	}
+
+	char key;
+	while (true) {
+		system("cls");
+
+		std::cout << "\t\t" << std::string(28, '#') << std::endl;
+		std::cout << "\t\t" << "#" << std::string(26, ' ') << "#" << std::endl;
+		std::cout << "\t\t" << "#  PZT Voltage: " << userPrefs.voltage << std::string(9, ' ') << " #" << std::endl;
+		std::cout << "\t\t" << "#  Pixel Contrast: " << userPrefs.threshold << std::string(4, ' ') << " #" << std::endl;
+		std::cout << "\t\t" << "#  Time for velocity: " << userPrefs.time << std::string(3, ' ') << " #" << std::endl;
+		std::cout << "\t\t" << "#  left: " << userPrefs.left << std::string(13, ' ') << " #" << std::endl;
+		std::cout << "\t\t" << "#  top: " << userPrefs.top << std::string(13, ' ') << " #" << std::endl;
+		std::cout << "\t\t" << "#" << std::string(26, ' ') << "#" << std::endl;
+		std::cout << "\t\t" << std::string(28, '#') << std::endl;
+
+		
+
+		std::cout << "'z' to set Voltage" << std::endl;
+		std::cout << "'x' for Threshold" << std::endl;
+		std::cout << "'c' for Time" << std::endl;
+		std::cout << "'v' for Left" << std::endl;
+		std::cout << "'b' for Top" << std::endl;
+		key = _getch(); // Use getchar to read a character
+		switch (key) {
+		case 'z':
+			getUserInput("electrophoretic voltage", userPrefs.voltage);
+			break;
+		case 'x':
+			getUserInput("threshold value for laser spot contrast", userPrefs.threshold);
+			break;
+		case 'c':
+			getUserInput("time of deposition", userPrefs.time);
+			break;
+		case 'v':
+			getUserInput("spot from left", userPrefs.left);
+			break;
+		case 'b':
+			getUserInput("spot from top", userPrefs.top);
+			break;
+		default:
+			continue; // Continue the loop for unknown keys
+		}
+
+		saveCSV(filename, userPrefs);
+		break;
+	}
 }

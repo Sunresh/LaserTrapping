@@ -1,12 +1,21 @@
 #include "Only.h"
 
 Depositi::Depositi() {
-	std::vector<UserPreferences> storedPreferences = readFromCSV(filename);
+	std::vector<UserPreferences> storedPreferences = pr.readFromCSV(filename);
 	for (const UserPreferences& prefs : storedPreferences) {
 		pztvolt = prefs.voltage;
 		thContrast = prefs.threshold;
-		timefordeposition=prefs.time;
+		timefordeposition = prefs.time; 
+		y1 = prefs.top;
+		x1 = prefs.left;
 	}
+	
+	pt1 = cv::Point(x1, y1);
+	x2 = x1 + 9;
+	y2 = y1 + 9;
+	pt2 = cv::Point(x2, y2);
+	roiw = x2 - x1;
+	roih = y2 - y1;
 	camm.open(0);
 	if (!camm.isOpened()) {
 		return;
@@ -569,7 +578,7 @@ void Depositi::drawRectangle(cv::Mat& frame, int x1, int y1, int x2, int y2, con
 
 void Depositi::app() {
 	system("cls");
-	std::vector<UserPreferences> storedPreferences = readFromCSV(filename);
+	std::vector<UserPreferences> storedPreferences = pr.readFromCSV(filename);
 
 	// Display stored preferences
 	for (const UserPreferences& prefs : storedPreferences) {
@@ -600,7 +609,7 @@ void Depositi::app() {
 	while (true) {
 		key = _getch();
 		if (key == 'e' || key == 'E') {
-			getPrefToCSV(filename);
+			pr.getPrefToCSV(filename);
 		}
 		if (key == 'd' || key == 'D') {
 			Depositi dia;

@@ -6,6 +6,7 @@
 #include <sstream>
 #include <fstream>
 #include "cameraonly.h"
+#include "preference.h"
 using namespace std;
 
 class Deposition : public CameraOnly {
@@ -25,6 +26,7 @@ private:
 	const cv::Scalar& black = cv::Scalar(0, 0, 0);
 	int roiw = x2 - x1;
 	int roih = y2 - y1;
+	Pref pr;
 public:
 	Deposition();
 	~Deposition();

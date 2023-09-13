@@ -5,7 +5,7 @@
 
 
 CameraOnly::CameraOnly() {
-	cam.open(1);
+	cam.open(0);
 }
 
 CameraOnly::~CameraOnly() {

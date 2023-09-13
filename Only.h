@@ -8,12 +8,14 @@
 #include <nidaqmx.h>
 #include <opencv2/opencv.hpp>
 #include "Diamond.h"
+#include "preference.h"
 using namespace std;
 
 class Depositi {
 private:
 	cv::VideoCapture camm;
 	Diamond diamond;
+	Pref pr;
 public:
 	Depositi();
 	~Depositi();
@@ -35,19 +37,19 @@ public:
 	void cAndD();
 	std::string appName = "Laser Trapping stage feedback";
 	std::string info = "LAEPD info";
-	const std::string filename = "diamond.csv";
+	const std::string filename = "preference.csv";
 	cv::VideoCapture cam;
 	int x1 = 315;
 	int y1 = 250;
-	cv::Point pt1 = cv::Point(x1, y1);
-	int x2 = x1+9;
-	int y2 = y1+9;
-	cv::Point pt2 = cv::Point(x2, y2);
+	cv::Point pt1;
+	int x2;
+	int y2;
+	cv::Point pt2;
 	const cv::Scalar& red = cv::Scalar(0, 0, 255);
 	const cv::Scalar& white = cv::Scalar(255, 255, 255);
 	const cv::Scalar& black = cv::Scalar(0, 0, 0);
-	int roiw = x2 - x1;
-	int roih = y2 - y1;
+	int roiw;
+	int roih;
 	int infowinw = 400;
 	int infowinh = 400;
 	int padding = 15;

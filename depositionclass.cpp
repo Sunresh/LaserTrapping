@@ -15,14 +15,14 @@ Deposition::Deposition() {
 	DAQmxClearTask(task1);
 	DAQmxClearTask(task2);
 
-	std::vector<UserPreferences> storedPreferences = readFromCSV(filename);
+	std::vector<UserPreferences> storedPreferences = pr.readFromCSV(filename);
 	
 	for (const UserPreferences& prefs : storedPreferences) {
 		pztvolt = prefs.voltage;
 		thContrast = prefs.threshold;
 		durationInSeconds = prefs.time;
 	}
-	cam.open(1);
+	cam.open(0);
 }
 
 Deposition::~Deposition() {
@@ -60,10 +60,13 @@ void Deposition::application() {
 	char filena[80];
 	char ima[80];
 	char filee[80];
-	strftime(filename, sizeof(filename), "C:/Users/nares/Desktop/allout/%Y-%m-%d_%H-%M-%S.jpg", &timeinfo);
-	strftime(filena, sizeof(filena), "C:/Users/nares/Desktop/allout/%Y-%m-%d_%H-%M-%S.csv", &timeinfo);
-	strftime(ima, sizeof(ima), "%Y-%m-%d_%H-%M-%S", &timeinfo);
-	strftime(filee, sizeof(filee), "C:/Users/nares/Desktop/allout/%Y-%m-%d_%H-%M-%S_vol.csv", &timeinfo);
+
+	std::string commonPath = "C:/Users/nares/Desktop/allout/";
+
+	strftime(filename, sizeof(filename), (commonPath + "%Y%m%d_%H%M%S_screen.jpg").c_str(), &timeinfo);
+	strftime(filena, sizeof(filena), (commonPath + "%Y%m%d_%H%M%S_contrast.csv").c_str(), &timeinfo);
+	strftime(ima, sizeof(ima), "%Y%m%d_%H%M%S", &timeinfo);
+	strftime(filee, sizeof(filee), (commonPath + "%Y%m%d_%H%M%S_voltage.csv").c_str(), &timeinfo);
 
 	auto startTime = std::chrono::high_resolution_clock::now();
 	double etime = 0;
