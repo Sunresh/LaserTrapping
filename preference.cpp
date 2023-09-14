@@ -40,91 +40,32 @@ void Pref::getUserInput(const std::string& fieldName, double& field) {
 	field = std::stod(input);
 }
 
-void Pref::getPrefToCSV(const std::string& filename) {
-	UserPreferences userPrefs;
-	std::string input;
-
-	std::cout << "Enter electrophoretic voltage: ";
-	std::cin >> input;
-	if (!isNumeric(input)) {
-		std::cerr << "Error: Voltage must be a numeric value." << std::endl;
-		return;
-	}
-	else {
-		userPrefs.voltage = std::stoi(input);
-	}
-
-	std::cout << "Enter threshold value for laser spot contrast: ";
-	std::cin >> input;
-	if (!isNumeric(input)) {
-		std::cerr << "Error: Threshold value for laser spot contrast must be a numeric value." << std::endl;
-		return;
-	}
-	else {
-		userPrefs.threshold = std::stod(input);
-	}
-
-	std::cout << "Enter time of deposition: ";
-	std::cin >> input;
-	if (!isNumeric(input)) {
-		std::cerr << "Error: time of deposition must be a numeric value." << std::endl;
-		return;
-	}
-	else {
-		userPrefs.time = std::stoi(input);
-	}
-
-	std::cout << "Enter spot from left (default:358): ";
-	std::cin >> input;
-	if (!isNumeric(input)) {
-		std::cerr << "Error: time of deposition must be a numeric value." << std::endl;
-		return;
-	}
-	else {
-		userPrefs.left = std::stoi(input);
-	}
-
-	std::cout << "Enter spot from Top  (default:238): ";
-	std::cin >> input;
-	if (!isNumeric(input)) {
-		std::cerr << "Error: time of deposition must be a numeric value." << std::endl;
-		return;
-	}
-	else {
-		userPrefs.top = std::stoi(input);
-	}
-
-
-	// Open the CSV file for writing
-	//std::ofstream outFile(filename, std::ios::app); // 'app' for appending
-	// Open the CSV file for writing, using "trunc" mode to create a new file
-	std::ofstream outFile(filename, std::ios::trunc);
-	if (!outFile.is_open()) {
-		std::cerr << "Error opening file for writing." << std::endl;
-		return;
-	}
-	// Write the preferences to the CSV file
-	outFile
-		<< userPrefs.voltage
-		<< ","
-		<< userPrefs.threshold
-		<< ","
-		<< userPrefs.time
-		<< ","
-		<< userPrefs.left
-		<< ","
-		<< userPrefs.top
-		<< "\n";
-	outFile.close();
-}
-
 std::vector<UserPreferences> Pref::readFromCSV(const std::string& filename) {
 	try{
 		std::vector<UserPreferences> preferences;
+		UserPreferences userPrefs;
+		// Load preferences from a file or create it with default values
+		if (!loadCSV(filename, userPrefs)) {
+			std::cerr << "No preferences found or error reading preferences. Creating with default values." << std::endl;
+			getUserInput("electrophoretic voltage", userPrefs.voltage);
+			getUserInput("threshold value for laser spot contrast", userPrefs.threshold);
+			getUserInput("time of deposition", userPrefs.time);
+			getUserInput("spot from left", userPrefs.left);
+			getUserInput("spot from top", userPrefs.top);
+			saveCSV(filename, userPrefs);
+		}
+		else {
+			loadCSV(filename, userPrefs);
+		}
 		std::ifstream inFile(filename);
 		if (!inFile.is_open()) {
 			std::cerr << "Error opening file for reading." << std::endl;
-			getPrefToCSV(filename);
+			getUserInput("electrophoretic voltage", userPrefs.voltage);
+			getUserInput("threshold value for laser spot contrast", userPrefs.threshold);
+			getUserInput("time of deposition", userPrefs.time);
+			getUserInput("spot from left", userPrefs.left);
+			getUserInput("spot from top", userPrefs.top);
+			saveCSV(filename, userPrefs);
 			return preferences;
 		}
 		std::string line;
@@ -228,7 +169,7 @@ void Pref::app(const std::string& filename) {
 		std::cout << "\t\t" << "#" << std::string(26, ' ') << "#" << std::endl;
 		std::cout << "\t\t" << std::string(28, '#') << std::endl;
 
-		
+
 
 		std::cout << "'z' to set Voltage" << std::endl;
 		std::cout << "'x' for Threshold" << std::endl;

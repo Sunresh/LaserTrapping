@@ -55,7 +55,7 @@ void Depositi::camra() {
 		if (key == 'q' || key == 'Q' || key == 21) {
 			camm.release();
 			cv::destroyAllWindows();
-			diamond.application();
+			diamond.app();
 			break;
 		}
 	}
@@ -90,21 +90,6 @@ void Depositi::drawGraphC(cv::Mat& frame, const std::deque<double>& graphValues)
 	drawYAxisValues(graphArea, graphHeight, black, std::to_string(pztvolt));
 	drawXAxis(graphArea, graphHeight, black);
 }
-
-//void Depositi::drawGraphLines(cv::Mat& graphArea, const std::deque<double>& graphValues) {
-//	cv::Point startPoint(30, 0);
-//	int height = graphArea.rows;
-//	int width = graphArea.cols;
-//	double amplitude = 100;
-//	for (int i = 0; i < graphValues.size(); ++i) {
-//		double y = height * graphValues[i];
-//		y = (y + amplitude) / ( 2 * amplitude) * (height - 1);
-//		cv::Point endPoint(i+30, height - static_cast<int>(y));
-//		line(graphArea, startPoint, endPoint, black, 1);
-//		startPoint = endPoint;
-//		cout << y << endl;
-//	}
-//}
 
 
 void Depositi::drawGraphLines(cv::Mat& graphArea, const std::deque<double>& graphValues) {
@@ -246,7 +231,6 @@ void Depositi::dodeposition() {
 				voltage -= endVolt / numSteps;
 				double volt = 0.0;
 				DAQmxWriteAnalogF64(task2, 1, true, 10.0, DAQmx_Val_GroupByChannel, &volt, nullptr, nullptr);
-
 			}
 			if (voltage >= endVolt && !updated) {
 				status = "Target Point.";
@@ -259,7 +243,6 @@ void Depositi::dodeposition() {
 				voltage -= endVolt / numSteps;
 				double volt = 0.0;
 				DAQmxWriteAnalogF64(task2, 1, true, 10.0, DAQmx_Val_GroupByChannel, &volt, nullptr, nullptr);
-
 			}
 		}
 
@@ -609,7 +592,7 @@ void Depositi::app() {
 	while (true) {
 		key = _getch();
 		if (key == 'e' || key == 'E') {
-			pr.getPrefToCSV(filename);
+//			pr.getPrefToCSV(filename);
 		}
 		if (key == 'd' || key == 'D') {
 			Depositi dia;

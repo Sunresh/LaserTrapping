@@ -14,7 +14,6 @@ struct UserPreferences {
 };
 class Pref{
 public:
-	void getPrefToCSV(const std::string& filename);
 	std::vector<UserPreferences> readFromCSV(const std::string& filename);
 	bool isNumeric(const std::string& str);
 	void getUserInput(const std::string& fieldName, int& field);

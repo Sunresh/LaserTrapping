@@ -19,6 +19,7 @@ private:
 	double durationInSeconds = 2;
 	double pztvolt = 0;
 	double thContrast = 0;
+	std::string commonPath = "C:/Users/nares/Desktop/allout/";
 	const char allout[80] = "C:/Users/nares/Desktop/allout";
 	const std::string filename = "preference.csv";
 	const cv::Scalar& red = cv::Scalar(0, 0, 255);

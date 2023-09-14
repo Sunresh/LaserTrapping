@@ -15,7 +15,7 @@ Diamond::Diamond() {
 Diamond::~Diamond() {
 }
 
-void Diamond::application() {
+void Diamond::app() {
 	system("cls");
 	std::vector<UserPreferences> storedPreferences = pr.readFromCSV(filename);
 
@@ -49,7 +49,7 @@ void Diamond::application() {
 	while (true) {
 		key = _getch();
 		if (key == 'e' || key == 'E') {
-			pr.getPrefToCSV(filename);
+//			pr.getPrefToCSV(filename);
 		}
 		if (key == 'x' || key == 'X') {
 			Depositi dia;

@@ -9,14 +9,13 @@
 using namespace std;
 
 class Diamond {
-private:
-	const std::string filename = "diamond.csv";
-	Pref pr;
 public:
+	static const std::string filename;
+	Pref pr;
 	Diamond();
 	~Diamond();
-	const std::string str[2][2] = { {"evolt", "Enter the Electrophoretic voltage:"}, {"pvolt", "Enter the PZT voltage:"} };
-	void application();
+	void initialSetup();
+	virtual void app();
 };
 
 #endif // DIAMOND_H

@@ -61,7 +61,6 @@ void Deposition::application() {
 	char ima[80];
 	char filee[80];
 
-	std::string commonPath = "C:/Users/nares/Desktop/allout/";
 
 	strftime(filename, sizeof(filename), (commonPath + "%Y%m%d_%H%M%S_screen.jpg").c_str(), &timeinfo);
 	strftime(filena, sizeof(filena), (commonPath + "%Y%m%d_%H%M%S_contrast.csv").c_str(), &timeinfo);

@@ -3,12 +3,12 @@
 #include "depositionclass.h"
 #include "preference.h"
 #include <conio.h>
-#include "cameraonly.h"   
-#include "Only.h"   
+#include "cameraonly.h"
+#include "Only.h"
 
 class MainWindow {
 public:
-	const std::string filename = "preference.csv";
+	std::string filename = "C:/Users/nares/Desktop/allout/preference.csv";
 	double durationInSeconds = 2;
 	double pztvolt = 0;
 	double thContrast = 0;
