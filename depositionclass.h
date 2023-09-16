@@ -5,30 +5,17 @@
 #include <nidaqmx.h>
 #include <sstream>
 #include <fstream>
-#include "cameraonly.h"
 #include "preference.h"
 using namespace std;
 
-class Deposition : public CameraOnly {
+class Deposition {
 private:
 	cv::VideoCapture cam;
 	TaskHandle task1 = nullptr;
 	TaskHandle task2 = nullptr;
-	const char* dev0 = "Dev2/ao0";
-	const char* dev1 = "Dev2/ao1";
-	double durationInSeconds = 2;
-	double pztvolt = 0;
-	double thContrast = 0;
-	std::string commonPath = "C:/Users/nares/Desktop/allout/";
-	const char allout[80] = "C:/Users/nares/Desktop/allout";
-	const std::string filename = "preference.csv";
-	const cv::Scalar& red = cv::Scalar(0, 0, 255);
-	const cv::Scalar& white = cv::Scalar(255, 255, 255);
-	const cv::Scalar& black = cv::Scalar(0, 0, 0);
-	int roiw = x2 - x1;
-	int roih = y2 - y1;
-	Pref pr;
+	
 public:
+	Pref pr;
 	Deposition();
 	~Deposition();
 	void application();

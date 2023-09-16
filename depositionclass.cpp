@@ -14,14 +14,6 @@ Deposition::Deposition() {
 	DAQmxWriteAnalogF64(task1, 1, true, 10.0, DAQmx_Val_GroupByChannel, &v1, nullptr, nullptr);
 	DAQmxClearTask(task1);
 	DAQmxClearTask(task2);
-
-	std::vector<UserPreferences> storedPreferences = pr.readFromCSV(filename);
-	
-	for (const UserPreferences& prefs : storedPreferences) {
-		pztvolt = prefs.voltage;
-		thContrast = prefs.threshold;
-		durationInSeconds = prefs.time;
-	}
 	cam.open(0);
 }
 
@@ -41,15 +33,15 @@ void Deposition::application() {
 	DAQmxCfgSampClkTiming(task1, "", 10.0, DAQmx_Val_Rising, DAQmx_Val_ContSamps, 1);
 	DAQmxCfgSampClkTiming(task2, "", 10.0, DAQmx_Val_Rising, DAQmx_Val_ContSamps, 1);
 
-	int numSteps = durationInSeconds * 100;
+	int numSteps = TTIME * 100;
 	double startVolt = 0.0;
-	double endVolt = pztvolt;
+	double endVolt = VOLTAGE;
 
 	std::stringstream pztvoltage;
 	pztvoltage << "Applied Voltage(PZT Stage): " << endVolt << "V";
 	std::string pztStr = pztvoltage.str();
 	std::stringstream thresholdp;
-	thresholdp << "Threshold Contrast value: " << thContrast << " ";
+	thresholdp << "Threshold Contrast value: " << BRIGHTNESS << " ";
 	std::string thrr = thresholdp.str();
 
 	auto now = std::chrono::system_clock::now();
@@ -60,7 +52,6 @@ void Deposition::application() {
 	char filena[80];
 	char ima[80];
 	char filee[80];
-
 
 	strftime(filename, sizeof(filename), (commonPath + "%Y%m%d_%H%M%S_screen.jpg").c_str(), &timeinfo);
 	strftime(filena, sizeof(filena), (commonPath + "%Y%m%d_%H%M%S_contrast.csv").c_str(), &timeinfo);
@@ -80,16 +71,16 @@ void Deposition::application() {
 	std::vector<double> grphValues;
 	std::deque<double> grphVa;
 	int timedelay = 0;
-	cv::Mat fullScreenImage(700, 1100, CV_8UC3, cv::Scalar(255, 255, 255)); // Red background
-	int fwidth = fullScreenImage.cols;//dframe
+	cv::Mat fullScreenImage(700, 1100, CV_8UC3, white);
+	int fwidth = fullScreenImage.cols;
 	int fheight = fullScreenImage.rows;
-	for (int i = 0; i <= numSteps * 2; i++) {
+	while(true) {
 		cam >> dframe;
 		if (dframe.empty()) {
 			break;
 		}
-		cv::rectangle(dframe, pt1, pt2, red, 1);
-		cv::Rect roiRect(x1+1, y1+1, roiw-2, roih-2); // (x, y, width, height)
+		cv::circle(dframe, POINT1, radius, red, 1);
+		cv::Rect roiRect(XaxisX1+1, YaxisY1+1, radius-2, radius-2);
 		grayColorRect = dframe(roiRect).clone();
 		double contrast = calculateContrast(grayColorRect);
 		contrastData.push_back(contrast);
@@ -101,18 +92,12 @@ void Deposition::application() {
 		string status;
 		
 		if (isIncrease && 0 <= voltage) {
-			if (i == 0) {
-				voltage += endVolt / numSteps;
-				status = "Starting..";
-				cout << status << endl;
-				electrophoretic = 2.0;
-			}
-			if (contrast>thContrast) {
+			if (contrast>BRIGHTNESS) {
 				status = "Deposition is going on..";
 				voltage += endVolt / (numSteps + timedelay);
 				electrophoretic = 2.0;
 			}
-			if ( contrast < thContrast ) {
+			if ( contrast < BRIGHTNESS) {
 				status = "Stage up..";
 				numSteps += 3;
 				timedelay += 1;
@@ -154,25 +139,13 @@ void Deposition::application() {
 		grphValues.push_back(voltage);
 		grphVa.push_back(voltage);
 
-		std::stringstream ss;
-		ss << "Running Voltage: " << voltage<<"V";
-		std::string voltageStr = ss.str();
-
-		std::stringstream sis;
-		sis << "EPD Voltage: " << electrophoretic<<"V";
-		std::string veel = sis.str();
-
 		auto currentTime = std::chrono::high_resolution_clock::now();
 		std::chrono::duration<double> elapsed = currentTime - startTime;
 		double elapsedTime = elapsed.count();
-
-		std::stringstream timeSS;
-		timeSS << "Time : " << elapsedTime << " s ";
-		std::string timeStr = timeSS.str();
-
-		std::stringstream totime;
-		totime << "Time of Hmax : " << etime << " s ";
-		std::string maxtime = totime.str();
+		std::string voltageStr = pr.double2string(voltage, "Running Voltage: ");
+		std::string veel = pr.double2string(electrophoretic,"EPD Voltage ");
+		std::string timeStr = pr.double2string(elapsedTime, "Time : ");
+		std::string maxtime = pr.double2string(etime, "Time of Hmax : ");
 
 		cv::Mat infoA = fullScreenImage(cv::Rect(0, 0, fwidth * 0.5, fheight * 0.5));
 		cv::resize(dframe, dframe, infoA.size());
@@ -193,7 +166,7 @@ void Deposition::application() {
 			pixData.pop_front();
 		}*/
 		allgraph(graapp, pixData,1);
-		allgraph(graappix, grphVa,pztvolt);
+		allgraph(graappix, grphVa,VOLTAGE);
 
 		int y = 35;
 		drawText(infoAreas, timeStr, 5, y, 0.5, red, 2);
@@ -255,17 +228,9 @@ void Deposition::drawRectangle(cv::Mat& frame, int x1, int y1, int x2, int y2, c
 }
 
 void Deposition::drawYAxisValues(cv::Mat& graphArea,const cv::Scalar& color, const double& text) {
-	std::stringstream yy1;
-	yy1 << text << " ";
-	std::string tr1 = yy1.str();
-
-	std::stringstream yy2;
-	yy2 << text/2 << " ";
-	std::string tr2 = yy2.str();
-
-	std::stringstream yy3;
-	yy3 << text-text <<" ";
-	std::string tr3 = yy3.str();
+	std::string tr1 = pr.double2string(text, " ");
+	std::string tr2 = pr.double2string(text/2, " ");
+	std::string tr3 = pr.double2string(text- text, " ");
 
 	drawText(graphArea, tr1, 10, graphArea.rows*0.15, 0.5, red, 2);
 	drawText(graphArea, tr2, 7, graphArea.rows*0.5, 0.5, red, 1);
@@ -273,7 +238,7 @@ void Deposition::drawYAxisValues(cv::Mat& graphArea,const cv::Scalar& color, con
 }
 
 void Deposition::drawXAxis(cv::Mat& graphArea, const cv::Scalar& color) {
-	double y = (thContrast / 1) * (graphArea.rows * 0.8) + 10;
+	double y = (BRIGHTNESS / 1) * (graphArea.rows * 0.8) + 10;
 	DrawDashedLine(graphArea, cv::Point(30, y), cv::Point(graphArea.cols, y), red, 2, "", 10);
 	line(graphArea, cv::Point(30, graphArea.rows*0.15), cv::Point(30, graphArea.rows*0.95), color, 1);//verticle
 	cv::line(graphArea, cv::Point(30, graphArea.rows*0.95), cv::Point(graphArea.cols, graphArea.rows*0.95), color, 1, cv::LINE_8);//horizontal
