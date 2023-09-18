@@ -13,11 +13,15 @@ private:
 	cv::VideoCapture cam;
 	TaskHandle task1 = nullptr;
 	TaskHandle task2 = nullptr;
-	
+	string status;
+	double contrast;
+	int fwidth = 1400;
+	int fheight = 750;
 public:
 	Pref pr;
 	Deposition();
 	~Deposition();
+	void camera();
 	void application();
 	void Deposition::allgraph(cv::Mat& frame, const std::deque<double>& graphValues, double upperLimit);
 	void Deposition::drawText(cv::Mat& frame, const std::string& text, int x, int y, double fontSize, const cv::Scalar& color, int thickness = 1);
@@ -27,6 +31,21 @@ public:
 	void Deposition::drawYAxisValues(cv::Mat& graphArea, const cv::Scalar& color, const double& text);
 	void Deposition::drawXAxis(cv::Mat& graphArea, const cv::Scalar& color);
 	void Deposition::DrawDashedLine(cv::Mat& img, cv::Point pt1, cv::Point pt2, cv::Scalar color, int thickness, std::string style, int gap);
+
+	void Deposition::laserspot(cv::Mat& dframe, double elapsedTime, cv::Mat& fullscreenimage);
+	int numSteps = TTIME * 100;
+	
+	double etime = 0;
+	bool updated = false;
+	bool isIncrease = true;
+	double voltage = 0.0;
+	double electrophoretic = 0.0;
+	cv::Mat frame, dframe, grayColorRect;
+	std::vector<double> contrastData, grphValues;
+	std::deque<double> pixData, grphVa, lla;
+	int timedelay = 0;
+	std::string voltageStr;
+
 };
 
 #endif // DEPOSITIONCLASS_H

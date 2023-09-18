@@ -2,7 +2,6 @@
 #include "depositionclass.h"
 #include "preference.h"
 #include <conio.h>
-#include "only.h"
 #include "MainWindow.h"
 
 MainWindow::MainWindow() {
@@ -17,8 +16,8 @@ MainWindow::MainWindow() {
 			break;
 		}
 		if (key == 'c') {
-			Only diay;
-			std::thread ddaia(&Only::application, &diay);
+			Deposition diay;
+			std::thread ddaia(&Deposition::camera, &diay);
 			ddaia.join();
 			break;
 		}
