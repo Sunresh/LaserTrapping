@@ -248,6 +248,7 @@ void Pref::helpscreen() {
 	string str[] = {
 		" ",
 		"z for height of pillar",
+		"x for brightness threshold",
 		"c for Time",
 		"v for x coordinate of first point of select area",
 		"b for y coordinate of first point of select area",
