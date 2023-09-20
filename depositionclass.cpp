@@ -14,7 +14,7 @@ Deposition::Deposition() {
 	DAQmxWriteAnalogF64(task1, 1, true, 10.0, DAQmx_Val_GroupByChannel, &v1, nullptr, nullptr);
 	DAQmxClearTask(task1);
 	DAQmxClearTask(task2);
-	cam.open(0);
+	cam.open(CAMERA);
 
 	int numSteps = TTIME * 100;
 	double etime = 0;
@@ -163,7 +163,7 @@ void Deposition::laserspot(cv::Mat& frame, double elapsedTime, cv::Mat& fullScre
 	
 	cv::flip(frame, dframe, 1);
 	cv::rectangle(dframe, POINT1, POINT2, red, 2);
-	cv::Rect roiRect(XaxisX1 + 1, YaxisY1 + 1, radius - 1, radius - 1);
+	cv::Rect roiRect(XaxisX1 + 2, YaxisY1 + 2, radius - 3, radius - 3);
 
 	auto now = std::chrono::system_clock::now();
 	auto time_t_now = std::chrono::system_clock::to_time_t(now);
@@ -215,7 +215,7 @@ void Deposition::laserspot(cv::Mat& frame, double elapsedTime, cv::Mat& fullScre
 	eerr4 << "Velocity : " << VOLTAGE * 6 / (numSteps + timedelay) << " micrometer/s";
 	std::string velocity = eerr4.str();
 
-	cv::Mat infoA = fullScreenImage(cv::Rect(0, 0, fwidth * 0.4, fheight * 0.4));
+	cv::Mat infoA = fullScreenImage(cv::Rect(0, 0, fwidth * 0.4, fheight * 0.5));
 	cv::resize(dframe, dframe, infoA.size());
 	cv::addWeighted(dframe, 1.0, dframe, 0, 0, infoA);
 

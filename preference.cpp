@@ -21,9 +21,9 @@ cv::Scalar black;
 std::string commonPath;
 char* dev0;
 char* dev1;
+int CAMERA;
 
 Pref::Pref() {
-
 	red = cv::Scalar(0, 0, 255);
 	white = cv::Scalar(255, 255, 255);
 	black = cv::Scalar(0, 0, 0);
@@ -31,17 +31,22 @@ Pref::Pref() {
 	dev0 = "Dev2/ao0";
 	dev1 = "Dev2/ao1";
 
-	std::vector<UserPreferences> storedPreferences = readFromCSV(PREF_FILE);
-	for (const UserPreferences& prefs : storedPreferences) {
-		VOLTAGE = prefs.height / 6;
-		BRIGHTNESS = prefs.threshold;
-		TTIME = prefs.time;
-		XaxisX1 = prefs.left;
-		YaxisY1 = prefs.top;
+	UserPreferences prefs;
+	if (!loadCSV(PREF_FILE, prefs)) {
+		std::cerr << "No preferences found or error reading preferences. Creating with default values." << std::endl;
 	}
+	else {
+		loadCSV(PREF_FILE, prefs);
+	}
+	VOLTAGE = prefs.height / 6;
+	BRIGHTNESS = prefs.threshold;
+	TTIME = prefs.time;
+	radius = 15;
+	XaxisX1 = prefs.left;
+	YaxisY1 = prefs.top;
 	POINT1 = cv::Point(XaxisX1, YaxisY1);
-	POINT2 = cv::Point(XaxisX1 +9, YaxisY1 +9);
-	radius = 9;
+	POINT2 = cv::Point(XaxisX1 + radius, YaxisY1 + radius);
+	CAMERA = prefs.camera;
 }
 
 bool Pref::isNumeric(const std::string& str) {
@@ -57,7 +62,6 @@ void Pref::getUserInput(const std::string& fieldName, int& field) {
 	std::string input;
 	std::cout << "Enter " << fieldName << ": ";
 	std::cin >> input;
-
 	if (!isNumeric(input)) {
 		std::cerr << "Error: " << fieldName << " must be a numeric value." << std::endl;
 		return;
@@ -68,101 +72,51 @@ void Pref::getUserInput(const std::string& fieldName, double& field) {
 	std::string input;
 	std::cout << "Enter " << fieldName << ": ";
 	std::cin >> input;
-
 	if (!isNumeric(input)) {
 		std::cerr << "Error: " << fieldName << " must be a numeric value." << std::endl;
 		return;
 	}
 	field = std::stod(input);
 }
-
-std::vector<UserPreferences> Pref::readFromCSV(const std::string& filename) {
-	try{
-		std::vector<UserPreferences> preferences;
-		UserPreferences userPrefs;
-		if (!loadCSV(filename, userPrefs)) {
-			std::cerr << "No preferences found or error reading preferences. Creating with default values." << std::endl;
-			getUserInput("Pillar height", userPrefs.height);
-			getUserInput("threshold value for laser spot contrast", userPrefs.threshold);
-			getUserInput("time of deposition", userPrefs.time);
-			getUserInput("spot from left", userPrefs.left);
-			getUserInput("spot from top", userPrefs.top);
-			saveCSV(filename, userPrefs);
-		}
-		else {
-			loadCSV(filename, userPrefs);
-		}
-		std::ifstream inFile(filename);
-		if (!inFile.is_open()) {
-			std::cerr << "Error opening file for reading." << std::endl;
-			getUserInput("Pillar Height", userPrefs.height);
-			getUserInput("threshold value for laser spot contrast", userPrefs.threshold);
-			getUserInput("time of deposition", userPrefs.time);
-			getUserInput("spot from left", userPrefs.left);
-			getUserInput("spot from top", userPrefs.top);
-			saveCSV(filename, userPrefs);
-			return preferences;
-		}
-		std::string line;
-		while (std::getline(inFile, line)) {
-			std::istringstream iss(line);
-			UserPreferences userPrefs;
-			std::string volt, th, timed,left,top;
-			if (std::getline(iss, volt, ',') &&
-				std::getline(iss, th, ',') &&
-				std::getline(iss, timed, ',') &&
-				std::getline(iss, left, ',') &&
-				std::getline(iss, top, ',')) {
-				// Convert ageStr to an integer
-				try {
-					userPrefs.height = std::stod(volt);
-					userPrefs.threshold = std::stod(th);
-					userPrefs.time = std::stoi(timed); 
-					userPrefs.left = std::stod(left);
-					userPrefs.top = std::stoi(top);
-				}
-				catch (const std::invalid_argument& e) {
-					std::cerr << "Error converting age to an integer: " << e.what() << std::endl;
-					continue;
-				}
-				preferences.push_back(userPrefs);
-			}
-		}
-		inFile.close();
-		return preferences;
-		}
-	catch (int a) {
-	
-	};
+void Pref::getDirectV(const std::string& fieldName, double& field, const string& val) {
+	field = std::stod(val);
 }
 
+void Pref::allentry() {
+	UserPreferences userPrefs;
+	std::cerr << "No preferences found or error reading preferences. Creating with default values." << std::endl;
+	getUserInput("Pillar height", userPrefs.height);
+	getUserInput("threshold value for laser spot contrast", userPrefs.threshold);
+	getUserInput("time of deposition", userPrefs.time);
+	getUserInput("spot from left", userPrefs.left);
+	getUserInput("spot from top", userPrefs.top);
+	saveCSV(PREF_FILE, userPrefs);
+}
 void Pref::saveCSV(const std::string& filename, const UserPreferences& userPrefs) {
 	std::ofstream outFile(filename);
 	if (!outFile.is_open()) {
 		std::cerr << "Error opening file for writing." << std::endl;
 		return;
 	}
-
 	// Write the preferences to the file with commas
 	outFile
 		<< userPrefs.height << ","
 		<< userPrefs.threshold << ","
 		<< userPrefs.time << ","
 		<< userPrefs.left << ","
-		<< userPrefs.top;
+		<< userPrefs.top << ","
+		<< userPrefs.camera;
 	outFile.close();
 }
 
 bool Pref::loadCSV(const std::string& filename, UserPreferences& userPrefs) {
 	std::ifstream inFile(filename);
 	if (!inFile.is_open()) {
+		allentry();
 		return false; // File doesn't exist or cannot be opened; use default values
 	}
-
 	std::string line;
 	std::getline(inFile, line);
-
-	// Split the line into values using commas
 	std::istringstream ss(line);
 	std::string value;
 	getline(ss, value, ',');
@@ -175,6 +129,8 @@ bool Pref::loadCSV(const std::string& filename, UserPreferences& userPrefs) {
 	userPrefs.left = std::stoi(value);
 	getline(ss, value, ',');
 	userPrefs.top = std::stoi(value);
+	getline(ss, value, ',');
+	userPrefs.camera = std::stod(value);
 
 	inFile.close();
 	return true;
@@ -182,7 +138,6 @@ bool Pref::loadCSV(const std::string& filename, UserPreferences& userPrefs) {
 
 void Pref::app(const std::string& filename) {
 	UserPreferences userPrefs;
-	// Load preferences from a file or create it with default values
 	if (!loadCSV(filename, userPrefs)) {
 		std::cerr << "No preferences found or error reading preferences. Creating with default values." << std::endl;
 	}
@@ -211,12 +166,17 @@ void Pref::app(const std::string& filename) {
 		case 'b':
 			getUserInput("spot from top", userPrefs.top);
 			break;
+		case 'w':
+			getDirectV("Webcam", userPrefs.camera, "0");
+			break;
+		case 'W':
+			getDirectV("CCD cam", userPrefs.camera, "1");
+			break;
 		case 'q':
 			break;
 		default:
 			continue; // Continue the loop for unknown keys
 		}
-
 		saveCSV(filename, userPrefs);
 		break;
 	}
@@ -230,30 +190,34 @@ void Pref::startscreen() {
 	else {
 		loadCSV(PREF_FILE, userPrefs);
 	}
-
 	system("cls");
-
-	std::cout << "\t\t" << std::string(40, '_') << std::endl;
-	std::cout << "\t\t" << "|" << std::string(38, ' ') << "\\" << std::endl;
-	std::cout << "\t\t" << "|  Pillar Height(μm): " << userPrefs.height << std::endl;
-	std::cout << "\t\t" << "|  Contrast:          " << userPrefs.threshold << std::endl;
-	std::cout << "\t\t" << "|  Time for velocity: " << userPrefs.time << std::endl;
-	std::cout << "\t\t" << "|  left:              " << userPrefs.left << std::endl;
-	std::cout << "\t\t" << "|  top:               " << userPrefs.top << std::endl;
-	std::cout << "\t\t" << "|" << std::string(38, ' ') << "/" << std::endl;
-	std::cout << "\t\t" << std::string(40, '-') << std::endl;
-
+	std::cout << "\t\t" << std::string(48, '_') << std::endl;
+	std::cout << "\t\t" << "|" << std::string(46, ' ') << "|" << std::endl;
+	std::cout << "\t\t" << "|  z. Pillar Height(micro-m): " << userPrefs.height << std::string(16, ' ') << "|" << std::endl;
+	std::cout << "\t\t" << "|  x. Contrast:               " << userPrefs.threshold << std::string(16, ' ') << "|" << std::endl;
+	std::cout << "\t\t" << "|  c. Time for velocity:      " << userPrefs.time << std::string(16, ' ') << "|" << std::endl;
+	std::cout << "\t\t" << "|  v. left:                   " << userPrefs.left << std::string(14, ' ') << "|" << std::endl;
+	std::cout << "\t\t" << "|  b. top:                    " << userPrefs.top << std::string(14, ' ') << "|" << std::endl;
+	if (userPrefs.camera == 0) {
+		std::cout << "\t\t" << "|  w. Camera:                 " << "Webcam" << std::string(11, ' ') << "|" << std::endl;
+	}
+	if (userPrefs.camera == 1) {
+		std::cout << "\t\t" << "|  W. Camera:                 " << "CCD Camera" << std::string(7, ' ') << "|" << std::endl;
+	}
+	std::cout << "\t\t" << "|" << std::string(46, ' ') << "|" << std::endl;
+	std::cout << "\t\t" << std::string(48, '-') << std::endl;
 }
 void Pref::helpscreen() {
 	string str[] = {
 		" ",
-		"z for height of pillar",
-		"x for brightness threshold",
-		"c for Time",
-		"v for x coordinate of first point of select area",
-		"b for y coordinate of first point of select area",
-		" ",
-		"q for BACK.<--|",
+		"z ---> height of pillar",
+		"x ---> brightness threshold",
+		"c ---> Time",
+		"v ---> x1 of select area",
+		"b ---> y1 of select area",
+		"w ---> Laptop Webcam ",
+		"W ---> CCD CAMERA",
+		"q ---> BACK <---",
 		" ",
 	};
 	for (string i : str) {
@@ -271,8 +235,7 @@ void Pref::menu() {
 		"e for edit, you want to change the above parameter.",
 		" ",
 		"c to start ccd camera.",
-		"m to start deposition.",
-		"b to start camera and deposition.",
+		"k to start deposition.",
 		" ",
 	};
 	for (string i : str) {
@@ -286,6 +249,7 @@ void Pref::menu() {
 }
 std::string Pref::double2string(const double& value, const std::string& stri) {
 	std::stringstream sis;
-	sis << stri ;
-	return sis.str();
+	sis << stri << value << " ";
+	std::string thrr = sis.str();
+	return thrr;
 }

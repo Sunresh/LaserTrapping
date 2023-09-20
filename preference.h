@@ -29,7 +29,7 @@ extern std::string commonPath;
 //std::string commonPath = "C:/Users/iwata/OneDrive/Desktop/allout/";
 extern char* dev0;
 extern char* dev1;
-
+extern int CAMERA;
 
 struct UserPreferences {
 	std::string name;
@@ -39,15 +39,16 @@ struct UserPreferences {
 	double height;
 	int time;
 	std::string favoriteColor;
+	double camera;
 };
 
 class Pref{
 public:
 	Pref();
-	std::vector<UserPreferences> readFromCSV(const std::string& filename);
 	bool isNumeric(const std::string& str);
 	void getUserInput(const std::string& fieldName, int& field);
 	void getUserInput(const std::string& fieldName, double& field);
+	void getDirectV(const std::string& fieldName, double& field, const string& val);
 	void saveCSV(const std::string& filename, const UserPreferences& userPrefs);
 	bool loadCSV(const std::string& filename, UserPreferences& userPrefs);
 	void app(const std::string& filename);
@@ -55,7 +56,7 @@ public:
 	void helpscreen();
 	void Pref::menu();
 	std::string double2string(const double& value, const string& stri);
-
+	void Pref::allentry();
 };
 
 #endif // PREFERENCE_H
