@@ -7,30 +7,32 @@
 #include <conio.h>
 
 using namespace std;
-cv::Point POINT1;
-cv::Point POINT2;
+cv::Point POINT1, POINT2;
 int radius;
-int XaxisX1;
-int YaxisY1;
-double VOLTAGE;
-double BRIGHTNESS;
+int XaxisX1, YaxisY1;
+double VOLTAGE, BRIGHTNESS;
 int TTIME;
-cv::Scalar red;
-cv::Scalar white;
-cv::Scalar black;
+cv::Scalar red, white, black;
 std::string commonPath;
 char* dev0;
 char* dev1;
 int CAMERA;
-
+std::string DesktopFolder;
 Pref::Pref() {
+	PWSTR path;
+	if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_Desktop, 0, NULL, &path))) {
+		DesktopFolder = std::string(path, path + wcslen(path));
+		CoTaskMemFree(path);
+	}
+	else {
+		std::wcerr << L"Failed to get the desktop path" << std::endl;
+	}
 	red = cv::Scalar(0, 0, 255);
 	white = cv::Scalar(255, 255, 255);
 	black = cv::Scalar(0, 0, 0);
-	commonPath = "C:/Users/nares/Desktop/allout/";
+	commonPath = DesktopFolder + "/allout/";
 	dev0 = "Dev2/ao0";
 	dev1 = "Dev2/ao1";
-
 	UserPreferences prefs;
 	if (!loadCSV(PREF_FILE, prefs)) {
 		std::cerr << "No preferences found or error reading preferences. Creating with default values." << std::endl;
@@ -57,7 +59,6 @@ bool Pref::isNumeric(const std::string& str) {
 	}
 	return true;
 }
-
 void Pref::getUserInput(const std::string& fieldName, int& field) {
 	std::string input;
 	std::cout << "Enter " << fieldName << ": ";
@@ -105,7 +106,7 @@ void Pref::saveCSV(const std::string& filename, const UserPreferences& userPrefs
 		<< userPrefs.time << ","
 		<< userPrefs.left << ","
 		<< userPrefs.top << ","
-		<< userPrefs.camera;
+		<< userPrefs.camera <<endl;
 	outFile.close();
 }
 

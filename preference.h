@@ -9,9 +9,10 @@
 #include <nidaqmx.h>
 #include <sstream>
 #include <fstream>
+#include <Windows.h>
+#include <ShlObj.h>
 
-#define PREF_FILE "C:/Users/nares/Desktop/allout/preference.csv"
-
+#define PREF_FILE commonPath+"preference.csv"
 using namespace std;
 
 extern cv::Point POINT1;
@@ -26,7 +27,6 @@ extern cv::Scalar red;
 extern cv::Scalar white;
 extern cv::Scalar black;
 extern std::string commonPath;
-//std::string commonPath = "C:/Users/iwata/OneDrive/Desktop/allout/";
 extern char* dev0;
 extern char* dev1;
 extern int CAMERA;
