@@ -40,8 +40,8 @@ MainWindow::MainWindow() {
 			DAQmxCfgSampClkTiming(task1, "", 10.0, DAQmx_Val_Rising, DAQmx_Val_ContSamps, 1);
 			DAQmxCfgSampClkTiming(task2, "", 10.0, DAQmx_Val_Rising, DAQmx_Val_ContSamps, 1);
 			DAQmxWriteAnalogF64(task2, 1, true, 10.0, DAQmx_Val_GroupByChannel, &v1, nullptr, nullptr);
-			for (double i = 1; i < VOLTAGE;i++) {
-				v1 -= VOLTAGE / i;
+			for (int i = 1; i < 100;i++) {
+				v1 -= VOLTAGE / (100);
 				DAQmxWriteAnalogF64(task1, 1, true, 10.0, DAQmx_Val_GroupByChannel, &v1, nullptr, nullptr);
 			}
 			DAQmxClearTask(task1);

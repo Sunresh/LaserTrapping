@@ -1,6 +1,8 @@
 #ifndef PREFERENCE_H
 #define PREFERENCE_H
 
+
+#include <NIDAQmx.h>
 #include <string>
 #include <vector>
 #include <conio.h>
@@ -57,6 +59,7 @@ public:
 	void Pref::menu();
 	std::string double2string(const double& value, const string& stri);
 	void Pref::allentry();
+	std::string Pref::getVOL();
 };
 
 #endif // PREFERENCE_H

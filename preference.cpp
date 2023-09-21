@@ -192,8 +192,9 @@ void Pref::startscreen() {
 		loadCSV(PREF_FILE, userPrefs);
 	}
 	system("cls");
+	std::string voltage = getVOL();
 	std::cout << "\t\t" << std::string(48, '_') << std::endl;
-	std::cout << "\t\t" << "|" << std::string(46, ' ') << "|" << std::endl;
+	std::cout << "\t\t" << "|" << std::string(46, ' ') << voltage<< "|" << std::endl;
 	std::cout << "\t\t" << "|  z. Pillar Height(micro-m): " << userPrefs.height << std::string(16, ' ') << "|" << std::endl;
 	std::cout << "\t\t" << "|  x. Contrast:               " << userPrefs.threshold << std::string(16, ' ') << "|" << std::endl;
 	std::cout << "\t\t" << "|  c. Time for velocity:      " << userPrefs.time << std::string(16, ' ') << "|" << std::endl;
@@ -253,4 +254,17 @@ std::string Pref::double2string(const double& value, const std::string& stri) {
 	sis << stri << value << " ";
 	std::string thrr = sis.str();
 	return thrr;
+}
+
+std::string Pref::getVOL() {
+	TaskHandle taskHandle = nullptr;
+	int32 error = 0;
+	float64 data = 0.0;
+	DAQmxCreateTask("", &taskHandle);
+	DAQmxCreateAOVoltageChan(taskHandle, dev1, "", -10.0, 10.0, DAQmx_Val_Volts, nullptr);
+	DAQmxStartTask(taskHandle);
+	DAQmxReadAnalogF64(taskHandle, 1, 10.0, DAQmx_Val_GroupByChannel, &data, 1, nullptr, nullptr);
+	DAQmxStopTask(taskHandle);
+	DAQmxClearTask(taskHandle);
+	return std::to_string(data);
 }
