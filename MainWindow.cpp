@@ -5,7 +5,6 @@
 #include "MainWindow.h"
 
 MainWindow::MainWindow() {
-
 	pr.startscreen();
 	pr.menu();
 	char key;
@@ -17,6 +16,8 @@ MainWindow::MainWindow() {
 		}
 		if (key == 'c') {
 			Deposition diay;
+			//diay.setfwidth(900);
+			//diay.setfheight(500);
 			std::thread ddaia(&Deposition::camera, &diay);
 			ddaia.join();
 			break;
@@ -28,24 +29,9 @@ MainWindow::MainWindow() {
 			break;
 		}
 		if (key == ' ') {
-			const char* dev0 = "Dev2/ao0";
-			const char* dev1 = "Dev2/ao1";
-			double v1 = 0.0;
-			TaskHandle task1 = nullptr;
-			TaskHandle task2 = nullptr;
-			DAQmxCreateTask("", &task1);
-			DAQmxCreateTask("", &task2);
-			DAQmxCreateAOVoltageChan(task1, dev1, "ao_channel", 0.0, 5.0, DAQmx_Val_Volts, nullptr);
-			DAQmxCreateAOVoltageChan(task2, dev0, "ao_channel", 0.0, 5.0, DAQmx_Val_Volts, nullptr);
-			DAQmxCfgSampClkTiming(task1, "", 10.0, DAQmx_Val_Rising, DAQmx_Val_ContSamps, 1);
-			DAQmxCfgSampClkTiming(task2, "", 10.0, DAQmx_Val_Rising, DAQmx_Val_ContSamps, 1);
-			DAQmxWriteAnalogF64(task2, 1, true, 10.0, DAQmx_Val_GroupByChannel, &v1, nullptr, nullptr);
-			for (int i = 1; i < 100;i++) {
-				v1 -= VOLTAGE / (100);
-				DAQmxWriteAnalogF64(task1, 1, true, 10.0, DAQmx_Val_GroupByChannel, &v1, nullptr, nullptr);
-			}
-			DAQmxClearTask(task1);
-			DAQmxClearTask(task2);
+			Pref pfe;
+			std::thread thh(&Pref::slowlyslowly, &pfe, LAST_VOLT_FILE);
+			thh.join();
 			break;
 		}
 	}

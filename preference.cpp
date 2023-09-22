@@ -18,7 +18,10 @@ char* dev0;
 char* dev1;
 int CAMERA;
 std::string DesktopFolder;
-Pref::Pref() {
+std::string LAST_VOLT_FILE;
+
+
+Pref::Pref() : height(),threshold(),time() {
 	PWSTR path;
 	if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_Desktop, 0, NULL, &path))) {
 		DesktopFolder = std::string(path, path + wcslen(path));
@@ -33,6 +36,7 @@ Pref::Pref() {
 	commonPath = DesktopFolder + "/allout/";
 	dev0 = "Dev2/ao0";
 	dev1 = "Dev2/ao1";
+	LAST_VOLT_FILE = "lastvolt.csv";
 	UserPreferences prefs;
 	if (!loadCSV(PREF_FILE, prefs)) {
 		std::cerr << "No preferences found or error reading preferences. Creating with default values." << std::endl;
@@ -49,6 +53,14 @@ Pref::Pref() {
 	POINT1 = cv::Point(XaxisX1, YaxisY1);
 	POINT2 = cv::Point(XaxisX1 + radius, YaxisY1 + radius);
 	CAMERA = prefs.camera;
+}
+
+void Pref::setHeight(int newHeight) {
+	height = newHeight;
+}
+
+int Pref::getHeight() const {
+	return height;
 }
 
 bool Pref::isNumeric(const std::string& str) {
@@ -192,10 +204,9 @@ void Pref::startscreen() {
 		loadCSV(PREF_FILE, userPrefs);
 	}
 	system("cls");
-	std::string voltage = getVOL();
 	std::cout << "\t\t" << std::string(48, '_') << std::endl;
-	std::cout << "\t\t" << "|" << std::string(46, ' ') << voltage<< "|" << std::endl;
-	std::cout << "\t\t" << "|  z. Pillar Height(micro-m): " << userPrefs.height << std::string(16, ' ') << "|" << std::endl;
+	std::cout << "\t\t" << "|" << std::string(46, ' ') << "|" << std::endl;
+	std::cout << "\t\t" << "|  z. Pillar Height(micro-m): " << userPrefs.height << std::string(15, ' ') << "|" << std::endl;
 	std::cout << "\t\t" << "|  x. Contrast:               " << userPrefs.threshold << std::string(16, ' ') << "|" << std::endl;
 	std::cout << "\t\t" << "|  c. Time for velocity:      " << userPrefs.time << std::string(16, ' ') << "|" << std::endl;
 	std::cout << "\t\t" << "|  v. left:                   " << userPrefs.left << std::string(14, ' ') << "|" << std::endl;
@@ -256,15 +267,78 @@ std::string Pref::double2string(const double& value, const std::string& stri) {
 	return thrr;
 }
 
-std::string Pref::getVOL() {
-	TaskHandle taskHandle = nullptr;
-	int32 error = 0;
-	float64 data = 0.0;
-	DAQmxCreateTask("", &taskHandle);
-	DAQmxCreateAOVoltageChan(taskHandle, dev1, "", -10.0, 10.0, DAQmx_Val_Volts, nullptr);
-	DAQmxStartTask(taskHandle);
-	DAQmxReadAnalogF64(taskHandle, 1, 10.0, DAQmx_Val_GroupByChannel, &data, 1, nullptr, nullptr);
-	DAQmxStopTask(taskHandle);
-	DAQmxClearTask(taskHandle);
-	return std::to_string(data);
+void Pref::simpleCSVsave(std::string& filename,double value) {
+	std::string fileout = commonPath + filename;
+	std::ofstream file(fileout);
+	if (!file.is_open()) {
+		std::cerr << "Failed to open the file." << std::endl;
+		return;
+	}
+	file << value << "\n";
+	file.close();
+}
+std::string Pref::simpleCSVread(std::string& filename) {
+	std::string fileout = commonPath + filename;
+	std::ifstream file(fileout);
+	if (!file.is_open()) {
+		std::cerr << "Failed to open the file." << std::endl;
+		return "the";
+	}
+	std::string line;
+	if (std::getline(file, line)) {
+		// Assuming the CSV file contains a single value per line
+		try {
+			std::string value = line;
+			return value;
+		}
+		catch (const std::invalid_argument& e) {
+			std::cerr << "Failed to convert value from CSV: " << e.what() << std::endl;
+			return e.what();
+		}
+		catch (const std::out_of_range& e) {
+			std::cerr << "Value from CSV out of range: " << e.what() << std::endl;
+			return e.what();
+		}
+	}
+	
+}
+
+void Pref::slowlyslowly(std::string& filename) {
+	std::string gett = simpleCSVread(filename);
+	double value = std::stod(gett);
+	const char* dev0 = "Dev2/ao0";
+	const char* dev1 = "Dev2/ao1";
+	double v1 = 0.0;
+	TaskHandle task1 = nullptr;
+	TaskHandle task2 = nullptr;
+	DAQmxCreateTask("", &task1);
+	DAQmxCreateTask("", &task2);
+	DAQmxCreateAOVoltageChan(task1, dev1, "ao_channel", 0.0, 5.0, DAQmx_Val_Volts, nullptr);
+	DAQmxCreateAOVoltageChan(task2, dev0, "ao_channel", 0.0, 5.0, DAQmx_Val_Volts, nullptr);
+	DAQmxCfgSampClkTiming(task1, "", 10.0, DAQmx_Val_Rising, DAQmx_Val_ContSamps, 1);
+	DAQmxCfgSampClkTiming(task2, "", 10.0, DAQmx_Val_Rising, DAQmx_Val_ContSamps, 1);
+	DAQmxWriteAnalogF64(task2, 1, true, 10.0, DAQmx_Val_GroupByChannel, &v1, nullptr, nullptr);
+	if (value != 0) {
+		for (int i = 1; i < 100; i++) {
+			value -= value / (100);
+			DAQmxWriteAnalogF64(task1, 1, true, 10.0, DAQmx_Val_GroupByChannel, &value, nullptr, nullptr);
+		}
+	}
+	DAQmxClearTask(task1);
+	DAQmxClearTask(task2);
+}
+
+void Pref::createDefaultFile(const std::string& filename) {
+    std::ofstream outFile(filename);
+
+    if (!outFile.is_open()) {
+        std::cerr << "Error: Unable to create default file '" << filename << "'" << std::endl;
+        return;
+    }
+
+    // Write default values to the file
+    outFile << "100,0.5,10,20,30,1.0"; // Modify this to include your default values
+    outFile.close();
+
+    std::cout << "Default file '" << filename << "' created successfully." << std::endl;
 }

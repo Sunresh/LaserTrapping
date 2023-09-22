@@ -15,6 +15,7 @@
 #include <ShlObj.h>
 
 #define PREF_FILE commonPath+"preference.csv"
+extern std::string LAST_VOLT_FILE;
 using namespace std;
 
 extern cv::Point POINT1;
@@ -46,6 +47,8 @@ struct UserPreferences {
 
 class Pref{
 public:
+	static const int SCREEN_HEIGHT = 600;
+	static const int SCREEN_WIDTH = 600;
 	Pref();
 	bool isNumeric(const std::string& str);
 	void getUserInput(const std::string& fieldName, int& field);
@@ -59,7 +62,17 @@ public:
 	void Pref::menu();
 	std::string double2string(const double& value, const string& stri);
 	void Pref::allentry();
-	std::string Pref::getVOL();
+	void simpleCSVsave(std::string& filename,double value);
+	std::string simpleCSVread(std::string& filename);
+	void slowlyslowly(std::string& filename);
+	void Pref::createDefaultFile(const std::string& filename);
+	void Pref::setHeight(int newHeight);
+	int getHeight() const;
+private:
+	int height;
+	double threshold;
+	int time;
+
 };
 
 #endif // PREFERENCE_H

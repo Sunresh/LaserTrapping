@@ -14,9 +14,9 @@ private:
 	TaskHandle task1 = nullptr;
 	TaskHandle task2 = nullptr;
 	string status;
-	double contrast;
-	int fwidth = 1400;
-	int fheight = 750;
+	double contrast = 1.0;
+	int fwidth;
+	int fheight;
 public:
 	Pref pr;
 	Deposition();
@@ -45,6 +45,11 @@ public:
 	std::deque<double> pixData, grphVa, lla;
 	int timedelay = 0;
 	std::string voltageStr;
+
+	void Deposition::setfwidth(int windowwidth);
+	int Deposition::getfwidth() const;
+	void Deposition::setfheight(int windowHeight);
+	int Deposition::getfheight() const;
 
 };
 

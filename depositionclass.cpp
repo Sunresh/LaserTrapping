@@ -2,7 +2,7 @@
 #include <conio.h>
 #include "preference.h"
 
-Deposition::Deposition() {
+Deposition::Deposition() : fwidth(1200),fheight(750) {
 	double v1 = 0.0;
 	DAQmxCreateTask("", &task1);
 	DAQmxCreateTask("", &task2);
@@ -27,6 +27,25 @@ Deposition::Deposition() {
 	std::deque<double> pixData, grphVa, lla;
 	int timedelay = 0;
 	std::string voltageStr;
+}
+
+void Deposition::setfwidth(int windowwidth) {
+	if (fwidth > 0)
+		fwidth = windowwidth;
+	else
+		throw std::invalid_argument("Height must be greater than 0.");
+}
+int Deposition::getfwidth() const {
+	return fwidth;
+}
+void Deposition::setfheight(int windowHeight) {
+	if (fheight > 0)
+		fheight = windowHeight;
+	else
+		throw std::invalid_argument("Height must be greater than 0.");
+}
+int Deposition::getfheight() const {
+	return fheight;
 }
 
 Deposition::~Deposition() {
@@ -103,12 +122,14 @@ void Deposition::application() {
 				status = "Deposition is going on..";
 				voltage += VOLTAGE / (numSteps + timedelay);
 				electrophoretic = 2.0;
+				pr.simpleCSVsave(LAST_VOLT_FILE, voltage);
 			}
 			if (contrast < BRIGHTNESS) {
 				status = "Stage up..";
 				timedelay += 1;
 				voltage -= VOLTAGE / numSteps;
 				electrophoretic = 0.0;
+				pr.simpleCSVsave(LAST_VOLT_FILE, voltage);
 			}
 			if (voltage >= VOLTAGE && !updated) {
 				status = "Target Point.";
@@ -120,6 +141,7 @@ void Deposition::application() {
 				isIncrease = false;
 				voltage -= VOLTAGE / numSteps;
 				electrophoretic = 0.0;
+				pr.simpleCSVsave(LAST_VOLT_FILE, voltage);
 			}
 		}
 		if (!isIncrease && voltage > 0) {
@@ -136,6 +158,7 @@ void Deposition::application() {
 				writeContrastToCSV(fullFilena, contrastData, "Number of frame", "Contrast");
 				writeContrastToCSV(fullFile, grphValues, "Number of frame", "PZT Voltage");
 				cv::destroyWindow("Status of deposition");
+				pr.simpleCSVsave(LAST_VOLT_FILE, voltage);
 				//return app(); 
 				break;
 			}
