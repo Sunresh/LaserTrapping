@@ -45,12 +45,19 @@ public:
 	std::deque<double> pixData, grphVa, lla;
 	int timedelay = 0;
 	std::string voltageStr;
+	std::string exportfile;
+	
 
 	void Deposition::setfwidth(int windowwidth);
 	int Deposition::getfwidth() const;
 	void Deposition::setfheight(int windowHeight);
 	int Deposition::getfheight() const;
+	void Deposition::setOutputFileName(std::string filename);
+	std::string Deposition::getOutputFileName() const;
 
+	double elapsedTime;
+	void Deposition::getelapsedTime(std::chrono::time_point<std::chrono::high_resolution_clock> startTime);
+	std::string Deposition::double2string(const double& value, const std::string& stri);
 };
 
 #endif // DEPOSITIONCLASS_H

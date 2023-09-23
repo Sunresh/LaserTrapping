@@ -2,7 +2,7 @@
 #include <conio.h>
 #include "preference.h"
 
-Deposition::Deposition() : fwidth(1200),fheight(750) {
+Deposition::Deposition() : fwidth(1200),fheight(750),exportfile(), elapsedTime() {
 	double v1 = 0.0;
 	DAQmxCreateTask("", &task1);
 	DAQmxCreateTask("", &task2);
@@ -47,6 +47,32 @@ void Deposition::setfheight(int windowHeight) {
 int Deposition::getfheight() const {
 	return fheight;
 }
+void Deposition::setOutputFileName(std::string filename = commonPath) {
+	auto now = std::chrono::system_clock::now();
+	auto time_t_now = std::chrono::system_clock::to_time_t(now);
+	struct tm timeinfo;
+	localtime_s(&timeinfo, &time_t_now);
+
+	std::ostringstream oss;
+	oss << std::put_time(&timeinfo, "%Y%m%d_%H%M_%S");
+//	exportfile = filename + oss.str();
+	exportfile = oss.str();
+}
+
+std::string Deposition::getOutputFileName() const {
+	return exportfile;
+}
+void Deposition::getelapsedTime(std::chrono::time_point<std::chrono::high_resolution_clock> startTime) {
+	auto currentTime = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double> elapsed = currentTime - startTime;
+	elapsedTime = elapsed.count();
+}
+std::string Deposition::double2string(const double& value, const std::string& stri) {
+	std::stringstream sis;
+	sis << stri << value << " ";
+	std::string thrr = sis.str();
+	return thrr;
+}
 
 Deposition::~Deposition() {
 	cam.release();
@@ -64,15 +90,10 @@ void Deposition::camera() {
 		if (frame.empty()) {
 			break;
 		}
-
-		auto currentTime = std::chrono::high_resolution_clock::now();
-		std::chrono::duration<double> elapsed = currentTime - startTime;
-		double elapsedTime = elapsed.count();
+		getelapsedTime(startTime);
 		laserspot(frame, elapsedTime, fullScreenImage);
-
 		cv::imshow("Status of deposition", fullScreenImage);
 		cv::moveWindow("Status of deposition", 0, 0);
-
 		char key = cv::waitKey(1);
 		if (key == 'q' || key == ' ') {
 			cam.release();
@@ -94,27 +115,14 @@ void Deposition::application() {
 	DAQmxCfgSampClkTiming(task2, "", 10.0, DAQmx_Val_Rising, DAQmx_Val_ContSamps, 1);
 
 	auto startTime = std::chrono::high_resolution_clock::now();
-	
 	cv::Mat fullScreenImage(fheight, fwidth, CV_8UC3, white);
-
-	auto now = std::chrono::system_clock::now();
-	auto time_t_now = std::chrono::system_clock::to_time_t(now);
-	struct tm timeinfo;
-	localtime_s(&timeinfo, &time_t_now); // Platform-specific, for Windows
-	char filename[80], filena[80], filee[80];
-
-	strftime(filename, sizeof(filename), (commonPath + "%Y%m%d_%H%M%S_screen.jpg").c_str(), &timeinfo);
-	strftime(filena, sizeof(filena), (commonPath + "%Y%m%d_%H%M%S_contrast.csv").c_str(), &timeinfo);
-	strftime(filee, sizeof(filee), (commonPath + "%Y%m%d_%H%M%S_voltage.csv").c_str(), &timeinfo);
-
+	setOutputFileName();
 	while (true) {
 		cam >> dframe;
 		if (dframe.empty()) {
 			break;
 		}
-		auto currentTime = std::chrono::high_resolution_clock::now();
-		std::chrono::duration<double> elapsed = currentTime - startTime;
-		double elapsedTime = elapsed.count();
+		getelapsedTime(startTime);
 		laserspot(dframe, elapsedTime, fullScreenImage);
 
 		if (isIncrease && 0 <= voltage) {
@@ -133,10 +141,7 @@ void Deposition::application() {
 			}
 			if (voltage >= VOLTAGE && !updated) {
 				status = "Target Point.";
-				cout << status << endl;
-				auto currenTime = std::chrono::high_resolution_clock::now();
-				std::chrono::duration<double> ella = currenTime - startTime;
-				etime = ella.count();
+				etime = elapsedTime;
 				updated = true;
 				isIncrease = false;
 				voltage -= VOLTAGE / numSteps;
@@ -151,12 +156,9 @@ void Deposition::application() {
 			if (voltage < 0) {
 				voltage = 0;
 				status = "Deposition completed..";
-				std::string fullFilename = std::string(filename);
-				std::string fullFilena = std::string(filena);
-				std::string fullFile = std::string(filee);
-				cv::imwrite(fullFilename, fullScreenImage);
-				writeContrastToCSV(fullFilena, contrastData, "Number of frame", "Contrast");
-				writeContrastToCSV(fullFile, grphValues, "Number of frame", "PZT Voltage");
+				cv::imwrite(commonPath+exportfile+".jpg", fullScreenImage);
+				writeContrastToCSV(commonPath+exportfile+"contrast.csv", contrastData, "Number of frame", "Contrast");
+				writeContrastToCSV(commonPath+exportfile+"volt.csv", grphValues, "Number of frame", "PZT Voltage");
 				cv::destroyWindow("Status of deposition");
 				pr.simpleCSVsave(LAST_VOLT_FILE, voltage);
 				//return app(); 
@@ -170,7 +172,6 @@ void Deposition::application() {
 
 		cv::imshow("Status of deposition", fullScreenImage);
 		cv::moveWindow("Status of deposition", 0, 0);
-
 		char key = cv::waitKey(1);
 		if (key == 'q' || key == ' ') {
 			cam.release();
@@ -188,55 +189,22 @@ void Deposition::laserspot(cv::Mat& frame, double elapsedTime, cv::Mat& fullScre
 	cv::rectangle(dframe, POINT1, POINT2, red, 2);
 	cv::Rect roiRect(XaxisX1 + 2, YaxisY1 + 2, radius - 3, radius - 3);
 
-	auto now = std::chrono::system_clock::now();
-	auto time_t_now = std::chrono::system_clock::to_time_t(now);
-	struct tm timeinfo;
-	localtime_s(&timeinfo, &time_t_now); // Platform-specific, for Windows
-	char ima[80];
-	strftime(ima, sizeof(ima), "%Y%m%d_%H%M%S", &timeinfo);
+	std::string pztStr = double2string(VOLTAGE, "Applied Voltage(PZT Stage): ");
+	std::string thrr = double2string(BRIGHTNESS, "Threshold Contrast value: ");
 
-	std::stringstream pztvoltage;
-	pztvoltage << "Applied Voltage(PZT Stage): " << VOLTAGE << "V";
-	std::string pztStr = pztvoltage.str();
-
-	std::stringstream thresholdp;
-	thresholdp << "Threshold Contrast value: " << BRIGHTNESS << " ";
-	std::string thrr = thresholdp.str();
-
-	
 	grayColorRect = dframe(roiRect).clone();
 	contrast = calculateContrast(grayColorRect);
-
 	contrastData.push_back(contrast);
 
-	std::stringstream con;
-	con << "Running Constrast: " << contrast << " per frame";
-	std::string constr = con.str();
-
-
+	std::string constr = double2string(contrast, "Running Constrast: ");
 	/*if (grphVa.size() > (fwidth - 30)) {
 		grphVa.pop_front();
 	}*/
-
-	std::stringstream eerr;
-	eerr << "Time: " << elapsedTime << "s";
-	std::string timeStr = eerr.str();
-
-	std::stringstream eerr1;
-	eerr1 << "Running Voltage: " << voltage << "V";
-	std::string voltageStr = eerr1.str();
-
-	std::stringstream eerr2;
-	eerr2 << "EPD Voltage: " << electrophoretic << "V";
-	std::string veel = eerr2.str();
-
-	std::stringstream eerr3;
-	eerr3 << "Time of Hmax : " << etime << "s";
-	std::string maxtime = eerr3.str();
-
-	std::stringstream eerr4;
-	eerr4 << "Velocity : " << VOLTAGE * 6 / (numSteps + timedelay) << " micrometer/s";
-	std::string velocity = eerr4.str();
+	std::string timeStr = double2string(elapsedTime, "Time: ");
+	std::string voltageStr = double2string(voltage, "Running Voltage: ");
+	std::string veel = double2string(electrophoretic, "EPD Voltage: ");
+	std::string maxtime = double2string(etime, "Time of Hmax : ");
+	std::string velocity = double2string(VOLTAGE * 6 / (numSteps + timedelay), "Velocity (micrometer/s): ");
 
 	cv::Mat infoA = fullScreenImage(cv::Rect(0, 0, fwidth * 0.4, fheight * 0.5));
 	cv::resize(dframe, dframe, infoA.size());
@@ -279,7 +247,7 @@ void Deposition::laserspot(cv::Mat& frame, double elapsedTime, cv::Mat& fullScre
 	y += 35;
 	drawText(infoAreas, thrr, 5, y, 0.5, red, 1);
 	y += 35;
-	drawText(infoAreas, ima, 5, y, 0.5, black, 1);
+	drawText(infoAreas, exportfile, 5, y, 0.5, black, 1);
 	y += 35;
 	drawText(infoAreas, velocity, 5, y, 0.5, black, 1);
 
@@ -313,9 +281,9 @@ void Deposition::drawRectangle(cv::Mat& frame, int x1, int y1, int x2, int y2, c
 }
 
 void Deposition::drawYAxisValues(cv::Mat& graphArea,const cv::Scalar& color, const double& text) {
-	std::string tr1 = pr.double2string(text, " ");
-	std::string tr2 = pr.double2string(text/2, " ");
-	std::string tr3 = pr.double2string(text- text, " ");
+	std::string tr1 = double2string(text, " ");
+	std::string tr2 = double2string(text/2, " ");
+	std::string tr3 = double2string(text- text, " ");
 
 	drawText(graphArea, tr1, 10, graphArea.rows*0.15, 0.5, red, 2);
 	drawText(graphArea, tr2, 7, graphArea.rows*0.5, 0.5, red, 1);
