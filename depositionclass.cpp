@@ -180,7 +180,6 @@ void Deposition::application() {
 }
 
 void Deposition::laserspot(cv::Mat& frame, double elapsedTime, cv::Mat& fullScreenImage) {
-	
 	cv::flip(frame, dframe, 1);
 	cv::rectangle(dframe, POINT1, POINT2, red, 1);
 	cv::rectangle(dframe, cv::Point(XaxisX1 - 30, YaxisY1 - 30), cv::Point(XaxisX1 + radius + 30, YaxisY1 + radius + 30), green, 1);
@@ -188,8 +187,8 @@ void Deposition::laserspot(cv::Mat& frame, double elapsedTime, cv::Mat& fullScre
 	cv::Rect roiRect(XaxisX1 + 1, YaxisY1 + 1, radius - 1, radius - 1);
 	cv::Rect rRect(XaxisX1 - 31, YaxisY1 - 31, radius + 63, radius + 63);
 
-	grayColorRect = dframe(roiRect).clone();
-	gRect = dframe(rRect).clone();
+	grayColorRect = dframe(roiRect);
+	gRect = dframe(rRect);
 
 	contrast = calculateContrast(grayColorRect);
 	contrastData.push_back(contrast);
@@ -206,18 +205,19 @@ void Deposition::laserspot(cv::Mat& frame, double elapsedTime, cv::Mat& fullScre
 	/*if (grphVa.size() > (fwidth - 30)) {
 		grphVa.pop_front();
 	}*/
+	cv::resize(grayColorRect, grayColorRect, cv::Size(fwidth / 3, fheight/2));
+	cv::resize(gRect, gRect, cv::Size(fwidth / 3, fheight / 2));
+	cv::resize(dframe, dframe, cv::Size(fwidth / 3, fheight / 2));
 
-	cv::Mat infoA = fullScreenImage(cv::Rect(0, 0, fwidth * 0.4, fheight*0.53));
-	cv::resize(dframe, dframe, infoA.size());
-	cv::addWeighted(dframe, 1.0, dframe, 0, 0, infoA);
+	cv::Rect mains(0, 0, dframe.cols, dframe.rows);
+	dframe.copyTo(fullScreenImage(mains));
 
-	cv::Mat zoom = fullScreenImage(cv::Rect(fwidth * 0.4, 0, fwidth * 0.3, fheight * 0.53));
-	cv::resize(grayColorRect, grayColorRect, zoom.size());
-	cv::addWeighted(grayColorRect, 1.0, grayColorRect, 0, 0, zoom);
+	cv::Rect grayRectROI(fwidth / 3, 0, grayColorRect.cols, grayColorRect.rows);
+	grayColorRect.copyTo(fullScreenImage(grayRectROI));
 
-	cv::Mat zoom1 = fullScreenImage(cv::Rect(fwidth * 0.7, 0, fwidth * 0.3, fheight * 0.53));
-	cv::resize(gRect, gRect, zoom1.size());
-	cv::addWeighted(gRect, 1.0, gRect, 0, 0, zoom1);
+	// Display gRect in fullScreenImage
+	cv::Rect gRectROI(2*fwidth / 3, 0, gRect.cols, gRect.rows);
+	gRect.copyTo(fullScreenImage(gRectROI));
 
 	cv::Mat graapp = fullScreenImage(cv::Rect(0, fheight / 2, fwidth, fheight / 4));
 	cv::Mat graappix = fullScreenImage(cv::Rect(0, (3 * fheight / 4), fwidth, fheight / 4));
@@ -238,7 +238,6 @@ void Deposition::laserspot(cv::Mat& frame, double elapsedTime, cv::Mat& fullScre
 	else {
 		drawRectangle(fullScreenImage, 0, y, 25, y+15, green, -1);
 	}
-
 }
 
 void Deposition::allgraph(cv::Mat& frame, const std::deque<double>& graphValues,double upperLimit) {
@@ -279,7 +278,7 @@ void Deposition::drawYAxisValues(cv::Mat& graphArea,const cv::Scalar& color, con
 }
 
 void Deposition::drawXAxis(cv::Mat& graphArea, const cv::Scalar& color) {
-	DrawDashedLine(graphArea, cv::Point(30, graphArea.rows*0.15), cv::Point(graphArea.cols, graphArea.rows*0.15), red, 1, "", 10);
+	DrawDashedLine(graphArea, cv::Point(30, graphArea.rows*0.15), cv::Point(graphArea.cols, graphArea.rows*0.15), red, 1, "dotted", 10);
 	line(graphArea, cv::Point(30, graphArea.rows*0.15), cv::Point(30, graphArea.rows*0.95), color, 1);//verticle
 	cv::line(graphArea, cv::Point(30, graphArea.rows*0.95), cv::Point(graphArea.cols, graphArea.rows*0.95), color, 1, cv::LINE_8);//horizontal
 }
