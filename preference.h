@@ -29,6 +29,7 @@ extern int TTIME;
 extern cv::Scalar red;
 extern cv::Scalar white;
 extern cv::Scalar black;
+extern cv::Scalar green;
 extern std::string commonPath;
 extern char* dev0;
 extern char* dev1;

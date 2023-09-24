@@ -13,7 +13,6 @@ private:
 	cv::VideoCapture cam;
 	TaskHandle task1 = nullptr;
 	TaskHandle task2 = nullptr;
-	string status;
 	double contrast = 1.0;
 	int fwidth;
 	int fheight;
@@ -40,11 +39,11 @@ public:
 	bool isIncrease = true;
 	double voltage = 0.0;
 	double electrophoretic = 0.0;
-	cv::Mat frame, dframe, grayColorRect;
+	cv::Mat frame, dframe, grayColorRect, gRect;
 	std::vector<double> contrastData, grphValues;
 	std::deque<double> pixData, grphVa, lla;
 	int timedelay = 0;
-	std::string voltageStr;
+
 	std::string exportfile;
 	
 

@@ -3,6 +3,8 @@
 #include "preference.h"
 
 Deposition::Deposition() : fwidth(1200),fheight(750),exportfile(), elapsedTime() {
+	fwidth = GetSystemMetrics(SM_CXSCREEN)-10;
+	fheight = GetSystemMetrics(SM_CYSCREEN)-90;
 	double v1 = 0.0;
 	DAQmxCreateTask("", &task1);
 	DAQmxCreateTask("", &task2);
@@ -22,11 +24,10 @@ Deposition::Deposition() : fwidth(1200),fheight(750),exportfile(), elapsedTime()
 	bool isIncrease = true;
 	double voltage = 0.0;
 	double electrophoretic = 0.0;
-	cv::Mat frame, dframe, grayColorRect;
+	cv::Mat frame, dframe, grayColorRect, gRect;
 	std::vector<double> contrastData, grphValues;
 	std::deque<double> pixData, grphVa, lla;
 	int timedelay = 0;
-	std::string voltageStr;
 }
 
 void Deposition::setfwidth(int windowwidth) {
@@ -69,7 +70,7 @@ void Deposition::getelapsedTime(std::chrono::time_point<std::chrono::high_resolu
 }
 std::string Deposition::double2string(const double& value, const std::string& stri) {
 	std::stringstream sis;
-	sis << stri << value << " ";
+	sis << stri << std::fixed << std::setprecision(3) << value;
 	std::string thrr = sis.str();
 	return thrr;
 }
@@ -127,20 +128,17 @@ void Deposition::application() {
 
 		if (isIncrease && 0 <= voltage) {
 			if (contrast > BRIGHTNESS) {
-				status = "Deposition is going on..";
 				voltage += VOLTAGE / (numSteps + timedelay);
 				electrophoretic = 2.0;
 				pr.simpleCSVsave(LAST_VOLT_FILE, voltage);
 			}
 			if (contrast < BRIGHTNESS) {
-				status = "Stage up..";
 				timedelay += 1;
 				voltage -= VOLTAGE / numSteps;
 				electrophoretic = 0.0;
 				pr.simpleCSVsave(LAST_VOLT_FILE, voltage);
 			}
 			if (voltage >= VOLTAGE && !updated) {
-				status = "Target Point.";
 				etime = elapsedTime;
 				updated = true;
 				isIncrease = false;
@@ -150,16 +148,14 @@ void Deposition::application() {
 			}
 		}
 		if (!isIncrease && voltage > 0) {
-			status = "Deposition finished..";
 			voltage -= VOLTAGE / (numSteps * 0.25);
 			electrophoretic = 0.0;
 			if (voltage < 0) {
 				voltage = 0;
-				status = "Deposition completed..";
 				cv::imwrite(commonPath+exportfile+".jpg", fullScreenImage);
-				writeContrastToCSV(commonPath+exportfile+"contrast.csv", contrastData, "Number of frame", "Contrast");
+				writeContrastToCSV(commonPath+exportfile+"cntr.csv", contrastData, "Number of frame", "Contrast");
 				writeContrastToCSV(commonPath+exportfile+"volt.csv", grphValues, "Number of frame", "PZT Voltage");
-				cv::destroyWindow("Status of deposition");
+				cv::destroyWindow(exportfile);
 				pr.simpleCSVsave(LAST_VOLT_FILE, voltage);
 				//return app(); 
 				break;
@@ -170,8 +166,8 @@ void Deposition::application() {
 		grphValues.push_back(voltage);
 		grphVa.push_back(voltage);
 
-		cv::imshow("Status of deposition", fullScreenImage);
-		cv::moveWindow("Status of deposition", 0, 0);
+		cv::imshow(exportfile, fullScreenImage);
+		cv::moveWindow(exportfile, 0, 0);
 		char key = cv::waitKey(1);
 		if (key == 'q' || key == ' ') {
 			cam.release();
@@ -186,43 +182,46 @@ void Deposition::application() {
 void Deposition::laserspot(cv::Mat& frame, double elapsedTime, cv::Mat& fullScreenImage) {
 	
 	cv::flip(frame, dframe, 1);
-	cv::rectangle(dframe, POINT1, POINT2, red, 2);
-	cv::Rect roiRect(XaxisX1 + 2, YaxisY1 + 2, radius - 3, radius - 3);
+	cv::rectangle(dframe, POINT1, POINT2, red, 1);
+	cv::rectangle(dframe, cv::Point(XaxisX1 - 30, YaxisY1 - 30), cv::Point(XaxisX1 + radius + 30, YaxisY1 + radius + 30), green, 1);
 
-	std::string pztStr = double2string(VOLTAGE, "Applied Voltage(PZT Stage): ");
-	std::string thrr = double2string(BRIGHTNESS, "Threshold Contrast value: ");
+	cv::Rect roiRect(XaxisX1 + 1, YaxisY1 + 1, radius - 1, radius - 1);
+	cv::Rect rRect(XaxisX1 - 31, YaxisY1 - 31, radius + 63, radius + 63);
 
 	grayColorRect = dframe(roiRect).clone();
+	gRect = dframe(rRect).clone();
+
 	contrast = calculateContrast(grayColorRect);
 	contrastData.push_back(contrast);
 
-	std::string constr = double2string(contrast, "Running Constrast: ");
+	std::string timeStr = double2string(elapsedTime, "T: ") + 
+		double2string(etime, " /THmax: ") + 
+		" /file:" + exportfile + 
+		double2string(VOLTAGE*6, " /Height: ") + 
+		double2string(electrophoretic, " /EPV: ")+ 
+		double2string(BRIGHTNESS, " /C_th: ")+
+		double2string(voltage * 6, " /H: ")+ 
+		double2string(contrast, " /C: ")+ 
+		double2string(VOLTAGE * 6 / (numSteps + timedelay), " /V(micm/s): ");
 	/*if (grphVa.size() > (fwidth - 30)) {
 		grphVa.pop_front();
 	}*/
-	std::string timeStr = double2string(elapsedTime, "Time: ");
-	std::string voltageStr = double2string(voltage, "Running Voltage: ");
-	std::string veel = double2string(electrophoretic, "EPD Voltage: ");
-	std::string maxtime = double2string(etime, "Time of Hmax : ");
-	std::string velocity = double2string(VOLTAGE * 6 / (numSteps + timedelay), "Velocity (micrometer/s): ");
 
-	cv::Mat infoA = fullScreenImage(cv::Rect(0, 0, fwidth * 0.4, fheight * 0.5));
+	cv::Mat infoA = fullScreenImage(cv::Rect(0, 0, fwidth * 0.4, fheight*0.53));
 	cv::resize(dframe, dframe, infoA.size());
 	cv::addWeighted(dframe, 1.0, dframe, 0, 0, infoA);
 
-	cv::Mat zoom = fullScreenImage(cv::Rect(fwidth * 0.4, 0, fwidth * 0.3, fheight * 0.5));
+	cv::Mat zoom = fullScreenImage(cv::Rect(fwidth * 0.4, 0, fwidth * 0.3, fheight * 0.53));
 	cv::resize(grayColorRect, grayColorRect, zoom.size());
 	cv::addWeighted(grayColorRect, 1.0, grayColorRect, 0, 0, zoom);
 
-	cv::Mat infoAreas = fullScreenImage(cv::Rect(fwidth * 0.7, 0, fwidth * 0.3, fheight * 0.5));
-	infoAreas.setTo(white);
+	cv::Mat zoom1 = fullScreenImage(cv::Rect(fwidth * 0.7, 0, fwidth * 0.3, fheight * 0.53));
+	cv::resize(gRect, gRect, zoom1.size());
+	cv::addWeighted(gRect, 1.0, gRect, 0, 0, zoom1);
 
 	cv::Mat graapp = fullScreenImage(cv::Rect(0, fheight / 2, fwidth, fheight / 4));
-	infoAreas.setTo(white);
-
 	cv::Mat graappix = fullScreenImage(cv::Rect(0, (3 * fheight / 4), fwidth, fheight / 4));
 
-	infoAreas.setTo(white);
 	pixData.push_back(contrast);
 	/*if (pixData.size() > (fwidth - 30)) {
 		pixData.pop_front();
@@ -230,26 +229,15 @@ void Deposition::laserspot(cv::Mat& frame, double elapsedTime, cv::Mat& fullScre
 	allgraph(graapp, pixData, 1);
 	allgraph(graappix, grphVa, VOLTAGE);
 
-	int y = 35;
-	drawText(infoAreas, timeStr, 5, y, 0.5, red, 2);
-	y += 35;
-	drawText(infoAreas, pztStr, 5, y, 0.5, red, 1);
-	y += 35;
-	drawText(infoAreas, voltageStr, 5, y, 0.5, red, 1);
-	y += 35;
-	drawText(infoAreas, status, 5, y, 0.5, red, 1);
-	y += 35;
-	drawText(infoAreas, maxtime, 5, y, 0.5, red, 1);
-	y += 35;
-	drawText(infoAreas, constr, 5, y, 0.5, red, 1);
-	y += 35;
-	drawText(infoAreas, veel, 5, y, 0.5, red, 1);
-	y += 35;
-	drawText(infoAreas, thrr, 5, y, 0.5, red, 1);
-	y += 35;
-	drawText(infoAreas, exportfile, 5, y, 0.5, black, 1);
-	y += 35;
-	drawText(infoAreas, velocity, 5, y, 0.5, black, 1);
+	int y = 30;
+	drawText(fullScreenImage, timeStr, 5, y, 0.5, red, 1);
+	y += 30;
+	if (electrophoretic == 0.0) {
+		drawRectangle(fullScreenImage, 0, y, 25, y+15, red, -1);
+	}
+	else {
+		drawRectangle(fullScreenImage, 0, y, 25, y+15, green, -1);
+	}
 
 }
 
@@ -285,13 +273,13 @@ void Deposition::drawYAxisValues(cv::Mat& graphArea,const cv::Scalar& color, con
 	std::string tr2 = double2string(text/2, " ");
 	std::string tr3 = double2string(text- text, " ");
 
-	drawText(graphArea, tr1, 10, graphArea.rows*0.15, 0.5, red, 2);
-	drawText(graphArea, tr2, 7, graphArea.rows*0.5, 0.5, red, 1);
-	drawText(graphArea, tr3, 10, graphArea.rows*0.95, 0.5, red, 2);
+	drawText(graphArea, tr1, -1, graphArea.rows*0.15, 0.5, red, 1);
+	drawText(graphArea, tr2, -1, graphArea.rows*0.55, 0.5, red, 1);
+	drawText(graphArea, tr3, -1, graphArea.rows*0.95, 0.5, red, 1);
 }
 
 void Deposition::drawXAxis(cv::Mat& graphArea, const cv::Scalar& color) {
-	DrawDashedLine(graphArea, cv::Point(30, graphArea.rows*0.15), cv::Point(graphArea.cols, graphArea.rows*0.15), red, 2, "", 10);
+	DrawDashedLine(graphArea, cv::Point(30, graphArea.rows*0.15), cv::Point(graphArea.cols, graphArea.rows*0.15), red, 1, "", 10);
 	line(graphArea, cv::Point(30, graphArea.rows*0.15), cv::Point(30, graphArea.rows*0.95), color, 1);//verticle
 	cv::line(graphArea, cv::Point(30, graphArea.rows*0.95), cv::Point(graphArea.cols, graphArea.rows*0.95), color, 1, cv::LINE_8);//horizontal
 }

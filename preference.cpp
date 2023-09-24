@@ -12,7 +12,7 @@ int radius;
 int XaxisX1, YaxisY1;
 double VOLTAGE, BRIGHTNESS;
 int TTIME;
-cv::Scalar red, white, black;
+cv::Scalar red, white, black,green;
 std::string commonPath;
 char* dev0;
 char* dev1;
@@ -33,6 +33,7 @@ Pref::Pref() : height(),threshold(),time() {
 	red = cv::Scalar(0, 0, 255);
 	white = cv::Scalar(255, 255, 255);
 	black = cv::Scalar(0, 0, 0);
+	green = cv::Scalar(0, 255, 0);
 	commonPath = DesktopFolder + "/allout/";
 	dev0 = "Dev2/ao0";
 	dev1 = "Dev2/ao1";
