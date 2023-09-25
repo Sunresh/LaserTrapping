@@ -26,6 +26,8 @@ public:
 	void Deposition::drawText(cv::Mat& frame, const std::string& text, int x, int y, double fontSize, const cv::Scalar& color, int thickness = 1);
 	void Deposition::drawRectangle(cv::Mat& frame, int x1, int y1, int x2, int y2, const cv::Scalar& color, int thickness = 1);
 	double Deposition::calculateContrast(const cv::Mat& frame);
+	double Deposition::stdev(const cv::Mat& frame);
+	double Deposition::mean(const cv::Mat& frame);
 	void Deposition::writeContrastToCSV(const std::string& filename, const std::vector<double>& contrastData, const std::string& xaxis, const std::string& yaxis);
 	void Deposition::drawYAxisValues(cv::Mat& graphArea, const cv::Scalar& color, const double& text);
 	void Deposition::drawXAxis(cv::Mat& graphArea, const cv::Scalar& color);

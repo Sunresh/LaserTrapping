@@ -190,21 +190,9 @@ void Deposition::laserspot(cv::Mat& frame, double elapsedTime, cv::Mat& fullScre
 	grayColorRect = dframe(roiRect);
 	gRect = dframe(rRect);
 
-	contrast = calculateContrast(grayColorRect);
+	contrast = mean(grayColorRect);
 	contrastData.push_back(contrast);
 
-	std::string timeStr = double2string(elapsedTime, "T: ") + 
-		double2string(etime, " /THmax: ") + 
-		" /file:" + exportfile + 
-		double2string(VOLTAGE*6, " /Height: ") + 
-		double2string(electrophoretic, " /EPV: ")+ 
-		double2string(BRIGHTNESS, " /C_th: ")+
-		double2string(voltage * 6, " /H: ")+ 
-		double2string(contrast, " /C: ")+ 
-		double2string(VOLTAGE * 6 / (numSteps + timedelay), " /V(micm/s): ");
-	/*if (grphVa.size() > (fwidth - 30)) {
-		grphVa.pop_front();
-	}*/
 	cv::resize(grayColorRect, grayColorRect, cv::Size(fwidth / 3, fheight/2));
 	cv::resize(gRect, gRect, cv::Size(fwidth / 3, fheight / 2));
 	cv::resize(dframe, dframe, cv::Size(fwidth / 3, fheight / 2));
@@ -226,8 +214,18 @@ void Deposition::laserspot(cv::Mat& frame, double elapsedTime, cv::Mat& fullScre
 	/*if (pixData.size() > (fwidth - 30)) {
 		pixData.pop_front();
 	}*/
-	allgraph(graapp, pixData, 1);
+	allgraph(graapp, pixData, 255);
 	allgraph(graappix, grphVa, VOLTAGE);
+
+	std::string timeStr = double2string(elapsedTime, "T: ") +
+		double2string(etime, " /THmax: ") +
+		" /file:" + exportfile +
+		double2string(VOLTAGE * 6, " /Height: ") +
+		double2string(electrophoretic, " /EPV: ") +
+		double2string(BRIGHTNESS, " /C_th: ") +
+		double2string(voltage * 6, " /H: ") +
+		double2string(contrast, " /C: ") +
+		double2string(VOLTAGE * 6 / (numSteps + timedelay), " /V(micm/s): ");
 
 	int y = 30;
 	drawText(fullScreenImage, timeStr, 5, y, 0.5, red, 1);
@@ -297,6 +295,32 @@ double Deposition::calculateContrast(const cv::Mat& frame) {
 	double contrast = sumPij / (255 * width * height);
 	return contrast;
 }
+
+double Deposition::mean(const cv::Mat& frame) {
+	cv::Mat grayFrame;
+	cv::cvtColor(frame, grayFrame, cv::COLOR_BGR2GRAY);
+	double mean = cv::mean(grayFrame)[0];
+	return mean;
+}
+
+double Deposition::stdev(const cv::Mat& frame) {
+	cv::Mat grayFrame;
+	cv::cvtColor(frame, grayFrame, cv::COLOR_BGR2GRAY);
+	int width = grayFrame.cols;
+	int height = grayFrame.rows;
+	double mean = cv::mean(grayFrame)[0];
+	double variance = 0.0;
+	for (int y = 0; y < height; ++y) {
+		for (int x = 0; x < width; ++x) {
+			double pixelValue = static_cast<double>(grayFrame.at<uchar>(y, x));
+			variance += std::pow(pixelValue - mean, 2);
+		}
+	}
+	variance /= (width * height);
+	double standardDeviation = std::sqrt(variance);
+	return standardDeviation;
+}
+
 
 void Deposition::writeContrastToCSV(const std::string& filename, const std::vector<double>& contrastData, const std::string& xaxis, const std::string& yaxis) {
 	std::ofstream outFile(filename);
