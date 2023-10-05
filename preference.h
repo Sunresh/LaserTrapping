@@ -41,6 +41,7 @@ struct UserPreferences {
 	double top;
 	double threshold;
 	double height;
+	double radius;
 	int time;
 	std::string favoriteColor;
 	double camera;

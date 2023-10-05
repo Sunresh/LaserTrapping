@@ -48,7 +48,7 @@ Pref::Pref() : height(),threshold(),time() {
 	VOLTAGE = prefs.height / 6;
 	BRIGHTNESS = prefs.threshold;
 	TTIME = prefs.time;
-	radius = 15;
+	radius = prefs.radius;
 	XaxisX1 = prefs.left;
 	YaxisY1 = prefs.top;
 	POINT1 = cv::Point(XaxisX1, YaxisY1);
@@ -119,7 +119,8 @@ void Pref::saveCSV(const std::string& filename, const UserPreferences& userPrefs
 		<< userPrefs.time << ","
 		<< userPrefs.left << ","
 		<< userPrefs.top << ","
-		<< userPrefs.camera <<endl;
+		<< userPrefs.camera << ","
+		<< userPrefs.radius <<endl;
 	outFile.close();
 }
 
@@ -145,6 +146,8 @@ bool Pref::loadCSV(const std::string& filename, UserPreferences& userPrefs) {
 	userPrefs.top = std::stoi(value);
 	getline(ss, value, ',');
 	userPrefs.camera = std::stod(value);
+	getline(ss, value, ',');
+	userPrefs.radius = std::stod(value);
 
 	inFile.close();
 	return true;
@@ -174,11 +177,14 @@ void Pref::app(const std::string& filename) {
 		case 'c':
 			getUserInput("time of deposition", userPrefs.time);
 			break;
-		case 'v':
+		case 'l':
 			getUserInput("spot from left", userPrefs.left);
 			break;
-		case 'b':
+		case 't':
 			getUserInput("spot from top", userPrefs.top);
+			break;
+		case 'r':
+			getUserInput("spot radius", userPrefs.radius);
 			break;
 		case 'w':
 			getDirectV("Webcam", userPrefs.camera, "0");
@@ -204,14 +210,15 @@ void Pref::startscreen() {
 	else {
 		loadCSV(PREF_FILE, userPrefs);
 	}
-	system("cls");
+//	system("cls");
 	std::cout << "\t\t" << std::string(48, '_') << std::endl;
 	std::cout << "\t\t" << "|" << std::string(46, ' ') << "|" << std::endl;
 	std::cout << "\t\t" << "|  z. Pillar Height(micro-m): " << userPrefs.height << std::string(15, ' ') << "|" << std::endl;
 	std::cout << "\t\t" << "|  x. Contrast:               " << userPrefs.threshold << std::string(16, ' ') << "|" << std::endl;
 	std::cout << "\t\t" << "|  c. Time for velocity:      " << userPrefs.time << std::string(16, ' ') << "|" << std::endl;
-	std::cout << "\t\t" << "|  v. left:                   " << userPrefs.left << std::string(14, ' ') << "|" << std::endl;
-	std::cout << "\t\t" << "|  b. top:                    " << userPrefs.top << std::string(14, ' ') << "|" << std::endl;
+	std::cout << "\t\t" << "|  l. left:                   " << userPrefs.left << std::string(14, ' ') << "|" << std::endl;
+	std::cout << "\t\t" << "|  t. top:                    " << userPrefs.top << std::string(14, ' ') << "|" << std::endl;
+	std::cout << "\t\t" << "|  r. radius:                 " << userPrefs.radius << std::string(14, ' ') << "|" << std::endl;
 	if (userPrefs.camera == 0) {
 		std::cout << "\t\t" << "|  w. Camera:                 " << "Webcam" << std::string(11, ' ') << "|" << std::endl;
 	}
@@ -227,8 +234,9 @@ void Pref::helpscreen() {
 		"z ---> height of pillar",
 		"x ---> brightness threshold",
 		"c ---> Time",
-		"v ---> x1 of select area",
-		"b ---> y1 of select area",
+		"l ---> x1 of select area",
+		"t ---> y1 of select area",
+		"r ---> radius",
 		"w ---> Laptop Webcam ",
 		"W ---> CCD CAMERA",
 		"q ---> BACK <---",
