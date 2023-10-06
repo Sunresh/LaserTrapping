@@ -16,8 +16,6 @@ private:
 	TaskHandle task1 = nullptr;
 	TaskHandle task2 = nullptr;
 	double contrast = 1.0;
-	double realcon = 1.0;
-
 	int fwidth;
 	int fheight;
 	double averagediff;
@@ -37,27 +35,21 @@ public:
 	static void Deposition::onMouse(int event, int x, int y, int flags, void* userdata);
 	void Deposition::laserspot(cv::Mat& dframe, double elapsedTime, cv::Mat& fullscreenimage);
 	int numSteps = TTIME * 100;
-	
 	double etime = 0;
-	bool updated = false;
-	bool isIncrease = true;
+	bool isComplete = false;
 	double voltage = 0.0;
 	double electrophoretic = 0.0;
 	cv::Mat frame, dframe, grayColorRect, gRect;
 	std::vector<double> contrastData, grphValues;
-	std::deque<double> pixData, grphVa, lla,fixdata;
+	std::deque<double> pixData, grphVa, lla;
 	int timedelay = 0;
-
 	std::string exportfile;
-	
-
 	void Deposition::setfwidth(int windowwidth);
 	int Deposition::getfwidth() const;
 	void Deposition::setfheight(int windowHeight);
 	int Deposition::getfheight() const;
 	void Deposition::setOutputFileName(std::string filename);
 	std::string Deposition::getOutputFileName() const;
-
 	double elapsedTime;
 	void Deposition::getelapsedTime(std::chrono::time_point<std::chrono::high_resolution_clock> startTime);
 	std::string Deposition::double2string(const double& value, const std::string& stri);

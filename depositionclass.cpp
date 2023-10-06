@@ -20,8 +20,7 @@ Deposition::Deposition() : fwidth(1200),fheight(750),exportfile(), elapsedTime()
 
 	int numSteps = TTIME * 100;
 	double etime = 0;
-	bool updated = false;
-	bool isIncrease = true;
+	bool isComplete = false;
 	double voltage = 0.0;
 	double electrophoretic = 0.0;
 	cv::Mat frame, dframe, grayColorRect, gRect;
@@ -136,8 +135,15 @@ void Deposition::application() {
 			}
 			getelapsedTime(startTime);
 			laserspot(dframe, elapsedTime, fullScreenImage);
-			cout << contrast << endl;
-			if (isIncrease && 0 <= voltage) {
+			if (!isComplete && voltage> -1) {
+				if (contrast > BRIGHTNESS) {
+					voltage += VOLTAGE / (numSteps + timedelay);
+					electrophoretic = 2.0;
+					pr.simpleCSVsave(LAST_VOLT_FILE, voltage);
+				}
+			}
+			if (!isComplete && voltage >= 0) {
+				
 				if (contrast > BRIGHTNESS) {
 					voltage += VOLTAGE / (numSteps + timedelay);
 					electrophoretic = 2.0;
@@ -149,16 +155,15 @@ void Deposition::application() {
 					electrophoretic = 0.0;
 					pr.simpleCSVsave(LAST_VOLT_FILE, voltage);
 				}
-				if (voltage >= VOLTAGE && !updated) {
+				if (voltage >= VOLTAGE && !isComplete) {
 					etime = elapsedTime;
-					updated = true;
-					isIncrease = false;
+					isComplete = true;
 					voltage -= VOLTAGE / numSteps;
 					electrophoretic = 0.0;
 					pr.simpleCSVsave(LAST_VOLT_FILE, voltage);
 				}
 			}
-			if (!isIncrease && voltage > 0) {
+			if (isComplete && voltage > 0) {
 				voltage -= VOLTAGE / (numSteps * 0.25);
 				electrophoretic = 0.0;
 				if (voltage < 0) {
@@ -233,7 +238,7 @@ void Deposition::laserspot(cv::Mat& frame, double elapsedTime, cv::Mat& fullScre
 	grayColorRect = dframe(roiRect);
 	gRect = dframe(rRect);
 	BrightnessClass bri(grayColorRect);
-	contrast = bri.avg();
+	contrast = bri.stdev();
 	contrastData.push_back(contrast);
 
 	cv::resize(grayColorRect, grayColorRect, cv::Size(fwidth / 3, fheight/2));
@@ -257,9 +262,8 @@ void Deposition::laserspot(cv::Mat& frame, double elapsedTime, cv::Mat& fullScre
 	/*if (pixData.size() > (fwidth - 30)) {
 		pixData.pop_front();
 	}*/
-	realcon = bri.sddif(pixData);
-	fixdata.push_back(realcon);
-	allgraph(graapp, fixdata, bri.getUpperlimit());
+
+	allgraph(graapp, pixData, bri.getUpperlimit());
 	allgraph(graappix, grphVa, VOLTAGE);
 
 	std::string timeStr = double2string(elapsedTime, "T: ") +

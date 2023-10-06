@@ -3,6 +3,7 @@
 class BrightnessClass {
 public:
 	cv::Mat frame, grayFrame;;
+	std::deque<double> framedata;
 	double upperlimit,meanCV,variance;
 	BrightnessClass(cv::Mat& frame);
 	~BrightnessClass();
@@ -10,6 +11,5 @@ public:
 	double BrightnessClass::stdev();
 	void BrightnessClass::setUpperlimit(double uplimit);
 	double BrightnessClass::getUpperlimit();
-	double BrightnessClass::sddif(std::deque<double>& graphValues);
 	int width, height;
 };
