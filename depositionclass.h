@@ -15,7 +15,7 @@ private:
 	cv::VideoCapture cam;
 	TaskHandle task1 = nullptr;
 	TaskHandle task2 = nullptr;
-	double contrast = 1.0;
+	double contrast = 1.0,feedback= 0;
 	int fwidth;
 	int fheight;
 	double averagediff;
@@ -41,7 +41,7 @@ public:
 	double electrophoretic = 0.0;
 	cv::Mat frame, dframe, grayColorRect, gRect;
 	std::vector<double> contrastData, grphValues;
-	std::deque<double> pixData, grphVa, lla;
+	std::deque<double> pixData, grphVa, lla,feed_deque;
 	int timedelay = 0;
 	std::string exportfile;
 	void Deposition::setfwidth(int windowwidth);
@@ -53,6 +53,7 @@ public:
 	double elapsedTime;
 	void Deposition::getelapsedTime(std::chrono::time_point<std::chrono::high_resolution_clock> startTime);
 	std::string Deposition::double2string(const double& value, const std::string& stri);
+	double Deposition::stdev(std::deque<double> pixData);
 };
 
 #endif // DEPOSITIONCLASS_H

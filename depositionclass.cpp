@@ -136,7 +136,7 @@ void Deposition::application() {
 			getelapsedTime(startTime);
 			laserspot(dframe, elapsedTime, fullScreenImage);
 			if (!isComplete && voltage> -1) {
-				if (contrast > BRIGHTNESS) {
+				if (feedback > BRIGHTNESS) {
 					voltage += VOLTAGE / (numSteps + timedelay);
 					electrophoretic = 2.0;
 					pr.simpleCSVsave(LAST_VOLT_FILE, voltage);
@@ -144,12 +144,12 @@ void Deposition::application() {
 			}
 			if (!isComplete && voltage >= 0) {
 				
-				if (contrast > BRIGHTNESS) {
+				if (feedback > BRIGHTNESS) {
 					voltage += VOLTAGE / (numSteps + timedelay);
 					electrophoretic = 2.0;
 					pr.simpleCSVsave(LAST_VOLT_FILE, voltage);
 				}
-				if (contrast < BRIGHTNESS) {
+				if (feedback < BRIGHTNESS) {
 					timedelay += 1;
 					voltage -= VOLTAGE / numSteps;
 					electrophoretic = 0.0;
@@ -238,7 +238,7 @@ void Deposition::laserspot(cv::Mat& frame, double elapsedTime, cv::Mat& fullScre
 	grayColorRect = dframe(roiRect);
 	gRect = dframe(rRect);
 	BrightnessClass bri(grayColorRect);
-	contrast = bri.stdev();
+	contrast = bri.avg();
 	contrastData.push_back(contrast);
 
 	cv::resize(grayColorRect, grayColorRect, cv::Size(fwidth / 3, fheight/2));
@@ -262,8 +262,9 @@ void Deposition::laserspot(cv::Mat& frame, double elapsedTime, cv::Mat& fullScre
 	/*if (pixData.size() > (fwidth - 30)) {
 		pixData.pop_front();
 	}*/
-
-	allgraph(graapp, pixData, bri.getUpperlimit());
+	feedback = stdev(pixData);
+	feed_deque.push_back(feedback);
+	allgraph(graapp, feed_deque, bri.getUpperlimit());
 	allgraph(graappix, grphVa, VOLTAGE);
 
 	std::string timeStr = double2string(elapsedTime, "T: ") +
@@ -325,9 +326,11 @@ void Deposition::drawYAxisValues(cv::Mat& graphArea,const cv::Scalar& color, con
 }
 
 void Deposition::drawXAxis(cv::Mat& graphArea, const cv::Scalar& color) {
-	DrawDashedLine(graphArea, cv::Point(30, graphArea.rows*0.15), cv::Point(graphArea.cols, graphArea.rows*0.15), red, 1, "dotted", 10);
+	double thline = ((80*(1-BRIGHTNESS))+15)/100;
+	DrawDashedLine(graphArea, cv::Point(30, graphArea.rows * 0.15), cv::Point(graphArea.cols, graphArea.rows * 0.15), red, 1, "dotted", 10);
 	line(graphArea, cv::Point(30, graphArea.rows*0.15), cv::Point(30, graphArea.rows*0.95), color, 1);//verticle
 	cv::line(graphArea, cv::Point(30, graphArea.rows*0.95), cv::Point(graphArea.cols, graphArea.rows*0.95), color, 1, cv::LINE_8);//horizontal
+	DrawDashedLine(graphArea, cv::Point(30, graphArea.rows * thline), cv::Point(graphArea.cols, graphArea.rows * thline), green, 1, "dotted", 10);
 }
 
 
@@ -376,4 +379,41 @@ void Deposition::DrawDashedLine(cv::Mat& img, cv::Point pt1, cv::Point pt2,cv::S
 			}
 		}
 	}
+}
+
+double Deposition::stdev(std::deque<double> pixData) {
+
+	int size = pixData.size();
+	double bright = 0, sum = 0;
+	double vari = 0;
+	int countLastFive = 0;
+	double variance = 0.0;
+	double mean = 0;
+	int expectedsize = 30;
+
+	cout << "\nsize - " << size << endl;
+	if (pixData.empty()) {
+		return 0.0;
+	}
+
+	for (int i = size - expectedsize; i < size; ++i) {
+		if (i >= 0) {
+			cout << "pixData - " << i << " : " << pixData[i] << endl;
+			sum += pixData[i];
+			++countLastFive;
+		}
+	}
+	mean = (countLastFive > 0) ? (sum / countLastFive) : 0.0;
+	cout << "mean - " << mean << endl;
+	for (int i = size - expectedsize; i < size; ++i) {
+		if (i >= 0) {
+			cout << "(" << pixData[i] << "-" << mean << ") : " << pixData[i] - mean << endl;
+			variance += std::pow(pixData[i] - mean, 2);
+		}
+	}
+	variance /= (countLastFive);
+	cout << "variance - " << variance << endl;
+	bright = std::sqrt(variance);
+	cout << "bright - " << bright << endl;
+	return bright;
 }
