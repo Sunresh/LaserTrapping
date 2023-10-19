@@ -54,6 +54,7 @@ public:
 	void Deposition::getelapsedTime(std::chrono::time_point<std::chrono::high_resolution_clock> startTime);
 	std::string Deposition::double2string(const double& value, const std::string& stri);
 	double Deposition::stdev(std::deque<double> pixData);
+	void Deposition::verticalIndicator(cv::Mat& frame, double bri);
 };
 
 #endif // DEPOSITIONCLASS_H

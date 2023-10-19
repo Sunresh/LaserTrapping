@@ -267,6 +267,8 @@ void Deposition::laserspot(cv::Mat& frame, double elapsedTime, cv::Mat& fullScre
 	allgraph(graapp, feed_deque, bri.getUpperlimit());
 	allgraph(graappix, grphVa, VOLTAGE);
 
+	Deposition::verticalIndicator(fullScreenImage,feedback);
+
 	std::string timeStr = double2string(elapsedTime, "T: ") +
 		double2string(etime, " /THmax: ") +
 		" /file:" + exportfile +
@@ -313,6 +315,11 @@ void Deposition::drawText(cv::Mat& frame, const std::string& text, int x, int y,
 
 void Deposition::drawRectangle(cv::Mat& frame, int x1, int y1, int x2, int y2, const cv::Scalar& color, int thickness) {
 	cv::rectangle(frame, cv::Point(x1, y1), cv::Point(x2, y2), color, thickness);
+}
+
+void Deposition::verticalIndicator(cv::Mat& frame, double brightness) {
+	int barHeight = static_cast<int>((brightness) * frame.rows*0.5);
+	Deposition::drawRectangle(frame, frame.cols * 0.99, frame.rows*0.5 - barHeight, frame.cols, frame.rows*0.5,red,-1);
 }
 
 void Deposition::drawYAxisValues(cv::Mat& graphArea,const cv::Scalar& color, const double& text) {
@@ -382,7 +389,6 @@ void Deposition::DrawDashedLine(cv::Mat& img, cv::Point pt1, cv::Point pt2,cv::S
 }
 
 double Deposition::stdev(std::deque<double> pixData) {
-
 	int size = pixData.size();
 	double bright = 0, sum = 0;
 	double vari = 0;
@@ -391,29 +397,28 @@ double Deposition::stdev(std::deque<double> pixData) {
 	double mean = 0;
 	int expectedsize = 30;
 
-	cout << "\nsize - " << size << endl;
+	//cout << "\nsize - " << size << endl;
 	if (pixData.empty()) {
 		return 0.0;
 	}
-
 	for (int i = size - expectedsize; i < size; ++i) {
 		if (i >= 0) {
-			cout << "pixData - " << i << " : " << pixData[i] << endl;
+			//cout << "pixData - " << i << " : " << pixData[i] << endl;
 			sum += pixData[i];
 			++countLastFive;
 		}
 	}
 	mean = (countLastFive > 0) ? (sum / countLastFive) : 0.0;
-	cout << "mean - " << mean << endl;
+	//cout << "mean - " << mean << endl;
 	for (int i = size - expectedsize; i < size; ++i) {
 		if (i >= 0) {
-			cout << "(" << pixData[i] << "-" << mean << ") : " << pixData[i] - mean << endl;
+			//cout << "(" << pixData[i] << "-" << mean << ") : " << pixData[i] - mean << endl;
 			variance += std::pow(pixData[i] - mean, 2);
 		}
 	}
 	variance /= (countLastFive);
-	cout << "variance - " << variance << endl;
+	//cout << "variance - " << variance << endl;
 	bright = std::sqrt(variance);
-	cout << "bright - " << bright << endl;
+	//cout << "bright - " << bright << endl;
 	return bright;
 }
