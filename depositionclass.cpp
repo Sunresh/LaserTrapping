@@ -108,7 +108,6 @@ void Deposition::camera() {
 		std::cerr << "\nAn exception occurred: \n" << e.what() << "\n\n" << std::endl;
 	}
 	catch (...) {
-		// Catch any other unknown exceptions
 		std::cerr << "\nAn unknown exception occurred.\n" << std::endl;
 	}
 }
@@ -139,28 +138,24 @@ void Deposition::application() {
 				if (feedback > BRIGHTNESS) {
 					voltage += VOLTAGE / (numSteps + timedelay);
 					electrophoretic = 2.0;
-					pr.simpleCSVsave(LAST_VOLT_FILE, voltage);
 				}
 			}
 			if (!isComplete && voltage >= 0) {
-				
 				if (feedback > BRIGHTNESS) {
 					voltage += VOLTAGE / (numSteps + timedelay);
 					electrophoretic = 2.0;
-					pr.simpleCSVsave(LAST_VOLT_FILE, voltage);
 				}
 				if (feedback < BRIGHTNESS) {
 					timedelay += 1;
-					voltage -= VOLTAGE / numSteps;
-					electrophoretic = 0.0;
-					pr.simpleCSVsave(LAST_VOLT_FILE, voltage);
+					voltage -= VOLTAGE / (numSteps*0.25);
+					electrophoretic = 2.0;
 				}
 				if (voltage >= VOLTAGE && !isComplete) {
+					writeContrastToCSV(commonPath + exportfile + ".csv", contrastData, grphValues, feed_deque, "No of frame", "Contrast", "PZT volt");
 					etime = elapsedTime;
 					isComplete = true;
 					voltage -= VOLTAGE / numSteps;
 					electrophoretic = 0.0;
-					pr.simpleCSVsave(LAST_VOLT_FILE, voltage);
 				}
 			}
 			if (isComplete && voltage > 0) {
@@ -169,11 +164,7 @@ void Deposition::application() {
 				if (voltage < 0) {
 					voltage = 0;
 					cv::imwrite(commonPath + exportfile + ".jpg", fullScreenImage);
-					writeContrastToCSV(commonPath + exportfile + "cntr.csv", contrastData, "Number of frame", "Contrast");
-					writeContrastToCSV(commonPath + exportfile + "volt.csv", grphValues, "Number of frame", "PZT Voltage");
 					cv::destroyWindow(exportfile);
-					pr.simpleCSVsave(LAST_VOLT_FILE, voltage);
-					//return app(); 
 					break;
 				}
 			}
@@ -181,14 +172,19 @@ void Deposition::application() {
 			DAQmxWriteAnalogF64(task1, 1, true, 10.0, DAQmx_Val_GroupByChannel, &voltage, nullptr, nullptr);
 			grphValues.push_back(voltage);
 			grphVa.push_back(voltage);
-			
+			#define NEPAL voltage;
+			pr.simpleCSVsave(LAST_VOLT_FILE, voltage);
 			cv::imshow(exportfile, fullScreenImage);
 			cv::moveWindow(exportfile, 0, 0);
 			char key = cv::waitKey(1);
 			if (key == 'q' || key == ' ') {
+				voltage -= VOLTAGE / (numSteps * 0.1);
 				cam.release();
 				cv::destroyAllWindows();
-				break;
+				if (voltage < 0) {
+					cout << NEPAL;
+					break;
+				}
 			}
 		}
 		DAQmxClearTask(task1);
@@ -198,7 +194,6 @@ void Deposition::application() {
 		std::cerr << "\nAn exception occurred: \n" << e.what() <<"\n\n"<< std::endl;
 	}
 	catch (...) {
-		// Catch any other unknown exceptions
 		std::cerr << "\nAn unknown exception occurred.\n" << std::endl;
 	}
 }
@@ -251,7 +246,6 @@ void Deposition::laserspot(cv::Mat& frame, double elapsedTime, cv::Mat& fullScre
 	cv::Rect grayRectROI(fwidth / 3, 0, grayColorRect.cols, grayColorRect.rows);
 	grayColorRect.copyTo(fullScreenImage(grayRectROI));
 
-	// Display gRect in fullScreenImage
 	cv::Rect gRectROI(2*fwidth / 3, 0, gRect.cols, gRect.rows);
 	gRect.copyTo(fullScreenImage(gRectROI));
 
@@ -266,27 +260,26 @@ void Deposition::laserspot(cv::Mat& frame, double elapsedTime, cv::Mat& fullScre
 	feed_deque.push_back(feedback);
 	allgraph(graapp, feed_deque, bri.getUpperlimit());
 	allgraph(graappix, grphVa, VOLTAGE);
+	int barHeight = static_cast<int>((feedback)*frame.rows * 0.5);
+	Deposition::drawRectangle(fullScreenImage, fullScreenImage.cols * 0.99, fullScreenImage.rows * 0.5 - barHeight, fullScreenImage.cols, fullScreenImage.rows * 0.5, red, -1);
 
-	Deposition::verticalIndicator(fullScreenImage,feedback);
+	int barHe = static_cast<double>((voltage)*fullScreenImage.rows*0.1);
+	Deposition::drawRectangle(fullScreenImage, 0, fullScreenImage.rows*0.5 - barHe, 5, fullScreenImage.rows * 0.5, green, -1);
 
 	std::string timeStr = double2string(elapsedTime, "T: ") +
-		double2string(etime, " /THmax: ") +
-		" /file:" + exportfile +
+		double2string(etime, " /THmax: ") +" /file:" + exportfile +
 		double2string(VOLTAGE * 6, " /Height: ") +
-		double2string(electrophoretic, " /EPV: ") +
 		double2string(BRIGHTNESS, " /C_th: ") +
-		double2string(voltage * 6, " /H: ") +
-		double2string(contrast, " /C: ") +
-		double2string(VOLTAGE * 6 / (numSteps + timedelay), " /V(micm/s): ");
+		double2string(VOLTAGE * 6 / (numSteps + timedelay), " /V(micro-m/s): ");
 
-	int y = 30;
+	int y = fheight *0.5;
 	drawText(fullScreenImage, timeStr, 5, y, 0.5, red, 1);
-	y += 30;
+	
 	if (electrophoretic == 0.0) {
-		drawRectangle(fullScreenImage, 0, y, 25, y+15, red, -1);
+		drawRectangle(fullScreenImage, 0, 5, 25, 20, red, -1);
 	}
 	else {
-		drawRectangle(fullScreenImage, 0, y, 25, y+15, green, -1);
+		drawRectangle(fullScreenImage, 0, 5, 25, 20, green, -1);
 	}
 }
 
@@ -326,7 +319,6 @@ void Deposition::drawYAxisValues(cv::Mat& graphArea,const cv::Scalar& color, con
 	std::string tr1 = double2string(text, " ");
 	std::string tr2 = double2string(text/2, " ");
 	std::string tr3 = double2string(text- text, " ");
-
 	drawText(graphArea, tr1, -1, graphArea.rows*0.15, 0.5, red, 1);
 	drawText(graphArea, tr2, -1, graphArea.rows*0.55, 0.5, red, 1);
 	drawText(graphArea, tr3, -1, graphArea.rows*0.95, 0.5, red, 1);
@@ -335,25 +327,37 @@ void Deposition::drawYAxisValues(cv::Mat& graphArea,const cv::Scalar& color, con
 void Deposition::drawXAxis(cv::Mat& graphArea, const cv::Scalar& color) {
 	double thline = ((80*(1-BRIGHTNESS))+15)/100;
 	DrawDashedLine(graphArea, cv::Point(30, graphArea.rows * 0.15), cv::Point(graphArea.cols, graphArea.rows * 0.15), red, 1, "dotted", 10);
-	line(graphArea, cv::Point(30, graphArea.rows*0.15), cv::Point(30, graphArea.rows*0.95), color, 1);//verticle
-	cv::line(graphArea, cv::Point(30, graphArea.rows*0.95), cv::Point(graphArea.cols, graphArea.rows*0.95), color, 1, cv::LINE_8);//horizontal
+	line(graphArea, cv::Point(30, graphArea.rows*0.15), cv::Point(30, graphArea.rows*0.95), color, 1);
+	cv::line(graphArea, cv::Point(30, graphArea.rows*0.95), cv::Point(graphArea.cols, graphArea.rows*0.95), color, 1, cv::LINE_8);
 	DrawDashedLine(graphArea, cv::Point(30, graphArea.rows * thline), cv::Point(graphArea.cols, graphArea.rows * thline), green, 1, "dotted", 10);
 }
 
-
-
-void Deposition::writeContrastToCSV(const std::string& filename, const std::vector<double>& contrastData, const std::string& xaxis, const std::string& yaxis) {
+void Deposition::writeContrastToCSV(const std::string& filename, const std::vector<double>& contrastData, const std::vector<double>& data3,  const std::deque<double>& data4, const std::string& xaxis, const std::string& yaxis, const std::string& name3) {
 	std::ofstream outFile(filename);
 	if (!outFile.is_open()) {
 		std::cerr << "Error opening file for writing." << std::endl;
 		return;
 	}
-	outFile << xaxis + ","+ yaxis << std::endl;
-	for (int i = 0; i < contrastData.size(); ++i) {
-		outFile << i + 1 << "," << contrastData[i] << std::endl;
+	outFile << xaxis + "," + yaxis + "," + name3 + "," + "SD" << std::endl;
+	size_t maxSize = max(contrastData.size(), data3.size());
+	for (size_t i = 0; i < maxSize; ++i) {
+		outFile << i + 1 << ",";
+		if (i < contrastData.size()) {
+			outFile << contrastData[i];
+		}
+		outFile << ",";
+		if (i < data3.size()) {
+			outFile << data3[i];
+		}
+		outFile << ",";
+		if (i < data4.size()) {
+			outFile << data4[i];
+		}
+		outFile << std::endl;
 	}
 	outFile.close();
 }
+
 void Deposition::DrawDashedLine(cv::Mat& img, cv::Point pt1, cv::Point pt2,cv::Scalar color, int thickness, std::string style,int gap) {
 	float dx = pt1.x - pt2.x;
 	float dy = pt1.y - pt2.y;
