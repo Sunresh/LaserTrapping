@@ -195,7 +195,7 @@ void Pref::app(const std::string& filename) {
 		case 'q':
 			break;
 		default:
-			continue; // Continue the loop for unknown keys
+			continue;
 		}
 		saveCSV(filename, userPrefs);
 		break;
@@ -295,7 +295,6 @@ std::string Pref::simpleCSVread(std::string& filename) {
 	}
 	std::string line;
 	if (std::getline(file, line)) {
-		// Assuming the CSV file contains a single value per line
 		try {
 			std::string value = line;
 			return value;
@@ -309,7 +308,6 @@ std::string Pref::simpleCSVread(std::string& filename) {
 			return e.what();
 		}
 	}
-	
 }
 
 void Pref::slowlyslowly(std::string& filename) {

@@ -338,8 +338,16 @@ void Deposition::writeContrastToCSV(const std::string& filename, const std::vect
 		std::cerr << "Error opening file for writing." << std::endl;
 		return;
 	}
-	outFile << xaxis + "," + yaxis + "," + name3 + "," + "SD" << std::endl;
+	outFile << xaxis + "," + yaxis + "," + name3 + "," + "SD"+","+"min" << std::endl;
 	size_t maxSize = max(contrastData.size(), data3.size());
+	
+	double min_value = DBL_MAX;
+	for (const double& value : data4) {
+		if (value != 0.0 && value < min_value) {
+			min_value = value;
+		}
+	}
+	
 	for (size_t i = 0; i < maxSize; ++i) {
 		outFile << i + 1 << ",";
 		if (i < contrastData.size()) {
@@ -352,6 +360,10 @@ void Deposition::writeContrastToCSV(const std::string& filename, const std::vect
 		outFile << ",";
 		if (i < data4.size()) {
 			outFile << data4[i];
+		}
+		outFile << ",";
+		if (i < data4.size()) {
+			outFile << min_value;
 		}
 		outFile << std::endl;
 	}

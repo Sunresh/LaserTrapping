@@ -13,6 +13,7 @@
 #include <fstream>
 #include <Windows.h>
 #include <ShlObj.h>
+#include <cfloat>
 
 #define PREF_FILE commonPath+"preference.csv"
 extern std::string LAST_VOLT_FILE;
