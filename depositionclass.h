@@ -55,6 +55,7 @@ public:
 	std::string Deposition::double2string(const double& value, const std::string& stri);
 	double Deposition::stdev(std::deque<double> pixData);
 	void Deposition::verticalIndicator(cv::Mat& frame, double bri);
+	void Deposition::wToCSV(const std::string& filename, const std::string& name);
 };
 
 #endif // DEPOSITIONCLASS_H

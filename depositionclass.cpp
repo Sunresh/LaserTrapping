@@ -151,11 +151,19 @@ void Deposition::application() {
 					electrophoretic = 2.0;
 				}
 				if (voltage >= VOLTAGE && !isComplete) {
-					writeContrastToCSV(commonPath + exportfile + ".csv", contrastData, grphValues, feed_deque, "No of frame", "Contrast", "PZT volt");
 					etime = elapsedTime;
 					isComplete = true;
 					voltage -= VOLTAGE / numSteps;
 					electrophoretic = 0.0;
+					writeContrastToCSV(commonPath + exportfile + ".csv", contrastData, grphValues, feed_deque, "No of frame", "Contrast", "PZT volt");
+					std::string mulpani = 
+						"Time,"+double2string(elapsedTime, " ") + "\n" +
+						"THmax," + double2string(etime, "") + "\n" +
+						"file," + exportfile + "\n" +
+						"Height," + double2string(VOLTAGE * 6, "") + "\n" +
+						"C_th," + double2string(BRIGHTNESS, "") + "\n" +
+						"V(micro-m/s)," + double2string(VOLTAGE * 6 / (numSteps + timedelay), "");
+					wToCSV(commonPath + exportfile + "d.csv", mulpani);					
 				}
 			}
 			if (isComplete && voltage > 0) {
@@ -172,17 +180,17 @@ void Deposition::application() {
 			DAQmxWriteAnalogF64(task1, 1, true, 10.0, DAQmx_Val_GroupByChannel, &voltage, nullptr, nullptr);
 			grphValues.push_back(voltage);
 			grphVa.push_back(voltage);
-			#define NEPAL voltage;
 			pr.simpleCSVsave(LAST_VOLT_FILE, voltage);
 			cv::imshow(exportfile, fullScreenImage);
 			cv::moveWindow(exportfile, 0, 0);
 			char key = cv::waitKey(1);
 			if (key == 'q' || key == ' ') {
+				isComplete = true;
 				voltage -= VOLTAGE / (numSteps * 0.1);
-				cam.release();
-				cv::destroyAllWindows();
+				electrophoretic = 0.0;
 				if (voltage < 0) {
-					cout << NEPAL;
+					cam.release();
+					cv::destroyAllWindows();
 					break;
 				}
 			}
@@ -251,7 +259,7 @@ void Deposition::laserspot(cv::Mat& frame, double elapsedTime, cv::Mat& fullScre
 
 	cv::Mat graapp = fullScreenImage(cv::Rect(0, fheight / 2, fwidth, fheight / 4));
 	cv::Mat graappix = fullScreenImage(cv::Rect(0, (3 * fheight / 4), fwidth, fheight / 4));
-
+	
 	pixData.push_back(contrast);
 	/*if (pixData.size() > (fwidth - 30)) {
 		pixData.pop_front();
@@ -272,8 +280,8 @@ void Deposition::laserspot(cv::Mat& frame, double elapsedTime, cv::Mat& fullScre
 		double2string(BRIGHTNESS, " /C_th: ") +
 		double2string(VOLTAGE * 6 / (numSteps + timedelay), " /V(micro-m/s): ");
 
-	int y = fheight *0.5;
-	drawText(fullScreenImage, timeStr, 5, y, 0.5, red, 1);
+	cv::Mat frameii = graapp(cv::Rect(0,0, fwidth,15));
+	drawText(frameii, timeStr, 0, 0, 0.5, red, 1);
 	
 	if (electrophoretic == 0.0) {
 		drawRectangle(fullScreenImage, 0, 5, 25, 20, red, -1);
@@ -332,22 +340,22 @@ void Deposition::drawXAxis(cv::Mat& graphArea, const cv::Scalar& color) {
 	DrawDashedLine(graphArea, cv::Point(30, graphArea.rows * thline), cv::Point(graphArea.cols, graphArea.rows * thline), green, 1, "dotted", 10);
 }
 
-void Deposition::writeContrastToCSV(const std::string& filename, const std::vector<double>& contrastData, const std::vector<double>& data3,  const std::deque<double>& data4, const std::string& xaxis, const std::string& yaxis, const std::string& name3) {
+void Deposition::writeContrastToCSV(const std::string& filename, const std::vector<double>& contrastData, const std::vector<double>& data3, const std::deque<double>& data4, const std::string& xaxis, const std::string& yaxis, const std::string& name3) {
 	std::ofstream outFile(filename);
 	if (!outFile.is_open()) {
 		std::cerr << "Error opening file for writing." << std::endl;
 		return;
 	}
-	outFile << xaxis + "," + yaxis + "," + name3 + "," + "SD"+","+"min" << std::endl;
+	outFile << xaxis + "," + yaxis + "," + name3 + "," + "SD" + "," + "min" << std::endl;
 	size_t maxSize = max(contrastData.size(), data3.size());
-	
+
 	double min_value = DBL_MAX;
 	for (const double& value : data4) {
 		if (value != 0.0 && value < min_value) {
 			min_value = value;
 		}
 	}
-	
+
 	for (size_t i = 0; i < maxSize; ++i) {
 		outFile << i + 1 << ",";
 		if (i < contrastData.size()) {
@@ -367,6 +375,16 @@ void Deposition::writeContrastToCSV(const std::string& filename, const std::vect
 		}
 		outFile << std::endl;
 	}
+	outFile.close();
+}
+
+void Deposition::wToCSV(const std::string& filename, const std::string& name) {
+	std::ofstream outFile(filename);
+	if (!outFile.is_open()) {
+		std::cerr << "Error opening file for writing." << std::endl;
+		return;
+	}
+	outFile <<name<< std::endl;
 	outFile.close();
 }
 
