@@ -172,6 +172,16 @@ void Deposition::application() {
 				if (voltage < 0) {
 					voltage = 0;
 					cv::imwrite(commonPath + exportfile + ".jpg", fullScreenImage);
+					writeContrastToCSV(commonPath + exportfile + "uc.csv", contrastData, grphValues, feed_deque, "No of frame", "Contrast", "PZT volt");
+					std::string mulpani =
+						"Time," + double2string(elapsedTime, " ") + "\n" +
+						"THmax," + double2string(etime, "") + "\n" +
+						"file," + exportfile + "\n" +
+						"Height," + double2string(VOLTAGE * 6, "") + "\n" +
+						"C_th," + double2string(BRIGHTNESS, "") + "\n" +
+						"V(micro-m/s)," + double2string(VOLTAGE * 6 / (numSteps + timedelay), "");
+					wToCSV(commonPath + exportfile + "duc.csv", mulpani);
+
 					cv::destroyWindow(exportfile);
 					break;
 				}
