@@ -25,11 +25,11 @@ public:
 	~Deposition();
 	void camera();
 	void application();
-	void Deposition::allgraph(cv::Mat& frame, const std::deque<double>& graphValues, double upperLimit);
+	void Deposition::allgraph(cv::Mat& frame, const std::deque<double>& graphValues, double upperLimit, const std::string& yxix);
 	void Deposition::drawText(cv::Mat& frame, const std::string& text, int x, int y, double fontSize, const cv::Scalar& color, int thickness = 1);
 	void Deposition::drawRectangle(cv::Mat& frame, int x1, int y1, int x2, int y2, const cv::Scalar& color, int thickness = 1);
 	void Deposition::writeContrastToCSV(const std::string& filename, const std::vector<double>& contrastData, const std::vector<double>& data3, const std::deque<double>& data4, const std::string& xaxis, const std::string& yaxis, const std::string& name3);
-	void Deposition::drawYAxisValues(cv::Mat& graphArea, const cv::Scalar& color, const double& text);
+	void Deposition::drawYAxisValues(cv::Mat& graphArea, const cv::Scalar& color, const double& text, const std::string& yaxis);
 	void Deposition::drawXAxis(cv::Mat& graphArea, const cv::Scalar& color);
 	void Deposition::DrawDashedLine(cv::Mat& img, cv::Point pt1, cv::Point pt2, cv::Scalar color, int thickness, std::string style, int gap);
 	static void Deposition::onMouse(int event, int x, int y, int flags, void* userdata);
@@ -54,7 +54,6 @@ public:
 	void Deposition::getelapsedTime(std::chrono::time_point<std::chrono::high_resolution_clock> startTime);
 	std::string Deposition::double2string(const double& value, const std::string& stri);
 	double Deposition::stdev(std::deque<double> pixData);
-	void Deposition::verticalIndicator(cv::Mat& frame, double bri);
 	void Deposition::wToCSV(const std::string& filename, const std::string& name);
 };
 

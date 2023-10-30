@@ -69,7 +69,7 @@ void Deposition::getelapsedTime(std::chrono::time_point<std::chrono::high_resolu
 }
 std::string Deposition::double2string(const double& value, const std::string& stri) {
 	std::stringstream sis;
-	sis << stri << std::fixed << std::setprecision(3) << value;
+	sis << stri << std::fixed << std::setprecision(1) << value;
 	std::string thrr = sis.str();
 	return thrr;
 }
@@ -241,15 +241,16 @@ void Deposition::laserspot(cv::Mat& frame, double elapsedTime, cv::Mat& fullScre
 	else {
 		YaxisY2 = YaxisY1 - 30;
 	}
-	cv::flip(frame, dframe, 1);
-	cv::rectangle(dframe, POINT1, POINT2, red, 1);
+	cv::flip(frame, dframe, 1);//flip
+	cv::rectangle(dframe, POINT1, POINT2, red, 1);//red
 	cv::rectangle(dframe, cv::Point(XaxisX2, YaxisY2), cv::Point(XaxisX1 + radius + 30, YaxisY1 + radius + 30), green, 1);
+	//green
+	cv::Rect roiRect(XaxisX1 + 1, YaxisY1 + 1, radius - 1, radius - 1);//small
+	cv::Rect rRect(XaxisX2, YaxisY2, radius + 63, radius + 63);//big
 
-	cv::Rect roiRect(XaxisX1 + 1, YaxisY1 + 1, radius - 1, radius - 1);
-	cv::Rect rRect(XaxisX2, YaxisY2, radius + 63, radius + 63);
+	grayColorRect = dframe(roiRect);//crop
+	gRect = dframe(rRect);//crop
 
-	grayColorRect = dframe(roiRect);
-	gRect = dframe(rRect);
 	BrightnessClass bri(grayColorRect);
 	contrast = bri.avg();
 	contrastData.push_back(contrast);
@@ -267,22 +268,32 @@ void Deposition::laserspot(cv::Mat& frame, double elapsedTime, cv::Mat& fullScre
 	cv::Rect gRectROI(2*fwidth / 3, 0, gRect.cols, gRect.rows);
 	gRect.copyTo(fullScreenImage(gRectROI));
 
-	cv::Mat graapp = fullScreenImage(cv::Rect(0, fheight / 2, fwidth, fheight / 4));
-	cv::Mat graappix = fullScreenImage(cv::Rect(0, (3 * fheight / 4), fwidth, fheight / 4));
-	
+	cv::Rect firstgraph(0, fheight*0.55, fwidth, fheight*0.15);
+	cv::Mat graapp = fullScreenImage(firstgraph);
+
+	cv::Rect secondgraph(0, fheight * 0.70, fwidth, fheight*0.15);//x1,y1,w,h
+	cv::Mat graappix = fullScreenImage(secondgraph);
+
+	cv::Rect thirdgraph(0, fheight * 0.85, fwidth, fheight*0.15);
+	cv::Mat heightgraph = fullScreenImage(thirdgraph);
+
 	pixData.push_back(contrast);
 	/*if (pixData.size() > (fwidth - 30)) {
 		pixData.pop_front();
 	}*/
 	feedback = stdev(pixData);
 	feed_deque.push_back(feedback);
-	allgraph(graapp, feed_deque, bri.getUpperlimit());
-	allgraph(graappix, grphVa, VOLTAGE);
-	int barHeight = static_cast<int>((feedback)*frame.rows * 0.5);
+	allgraph(graapp, pixData, 1,"Brightness");
+	allgraph(graappix,  feed_deque, 0.4,"SD");
+	allgraph(heightgraph, grphVa, VOLTAGE,"PZT");
+
+	int barHeight = static_cast<int>((feedback)*100);
+	int hightofbrightness = 100;
 	Deposition::drawRectangle(fullScreenImage, fullScreenImage.cols * 0.99, fullScreenImage.rows * 0.5 - barHeight, fullScreenImage.cols, fullScreenImage.rows * 0.5, red, -1);
 
-	int barHe = static_cast<double>((voltage)*fullScreenImage.rows*0.1);
-	Deposition::drawRectangle(fullScreenImage, 0, fullScreenImage.rows*0.5 - barHe, 5, fullScreenImage.rows * 0.5, green, -1);
+	int barHe = static_cast<double>((voltage)*100);
+	int highestvalueofvoltage = 100;
+	Deposition::drawRectangle(fullScreenImage, 0, VOLTAGE*100 - (barHe), 5, VOLTAGE*100, green, -1);
 
 	std::string timeStr = double2string(elapsedTime, "T: ") +
 		double2string(etime, " /THmax: ") +" /file:" + exportfile +
@@ -290,8 +301,7 @@ void Deposition::laserspot(cv::Mat& frame, double elapsedTime, cv::Mat& fullScre
 		double2string(BRIGHTNESS, " /C_th: ") +
 		double2string(VOLTAGE * 6 / (numSteps + timedelay), " /V(micro-m/s): ");
 
-	cv::Mat frameii = graapp(cv::Rect(0,0, fwidth,15));
-	drawText(frameii, timeStr, 0, 0, 0.5, red, 1);
+	drawText(fullScreenImage, timeStr, 0, 30, 0.5, red, 1);
 	
 	if (electrophoretic == 0.0) {
 		drawRectangle(fullScreenImage, 0, 5, 25, 20, red, -1);
@@ -301,22 +311,21 @@ void Deposition::laserspot(cv::Mat& frame, double elapsedTime, cv::Mat& fullScre
 	}
 }
 
-void Deposition::allgraph(cv::Mat& frame, const std::deque<double>& graphValues,double upperLimit) {
+void Deposition::allgraph(cv::Mat& frame, const std::deque<double>& graphValues,double upperLimit, const std::string& yxix) {
 	const int startPointX = 30;
-	const int lineThickness = 1;
 	if (graphValues.empty()) {
 		return;
 	}
 	int height = frame.rows;
 	int width = frame.cols;
-	cv::Point startPoint(startPointX, frame.rows * 0.5);
+	cv::Point startPoint(startPointX, height * 0.5);
 	for (int i = 0; i < graphValues.size(); ++i) {
 		double y = (graphValues[i] / upperLimit) * (height*0.8)+ 10;
 		cv::Point endPoint(i + startPointX, height - static_cast<int>(y));
-		line(frame, startPoint, endPoint, cv::Scalar(0, 0, 0), lineThickness);
+		line(frame, startPoint, endPoint, cv::Scalar(0, 0, 0), 1);
 		startPoint = endPoint;
 	}
-	drawYAxisValues(frame, black, upperLimit);
+	drawYAxisValues(frame, black, upperLimit, yxix);
 	drawXAxis(frame, black);
 }
 
@@ -328,17 +337,11 @@ void Deposition::drawRectangle(cv::Mat& frame, int x1, int y1, int x2, int y2, c
 	cv::rectangle(frame, cv::Point(x1, y1), cv::Point(x2, y2), color, thickness);
 }
 
-void Deposition::verticalIndicator(cv::Mat& frame, double brightness) {
-	int barHeight = static_cast<int>((brightness) * frame.rows*0.5);
-	Deposition::drawRectangle(frame, frame.cols * 0.99, frame.rows*0.5 - barHeight, frame.cols, frame.rows*0.5,red,-1);
-}
-
-void Deposition::drawYAxisValues(cv::Mat& graphArea,const cv::Scalar& color, const double& text) {
+void Deposition::drawYAxisValues(cv::Mat& graphArea,const cv::Scalar& color, const double& text, const std::string& yaxis) {
 	std::string tr1 = double2string(text, " ");
-	std::string tr2 = double2string(text/2, " ");
 	std::string tr3 = double2string(text- text, " ");
 	drawText(graphArea, tr1, -1, graphArea.rows*0.15, 0.5, red, 1);
-	drawText(graphArea, tr2, -1, graphArea.rows*0.55, 0.5, red, 1);
+	drawText(graphArea, yaxis, -1, graphArea.rows*0.55, 0.5, green, 1);
 	drawText(graphArea, tr3, -1, graphArea.rows*0.95, 0.5, red, 1);
 }
 
@@ -347,7 +350,7 @@ void Deposition::drawXAxis(cv::Mat& graphArea, const cv::Scalar& color) {
 	DrawDashedLine(graphArea, cv::Point(30, graphArea.rows * 0.15), cv::Point(graphArea.cols, graphArea.rows * 0.15), red, 1, "dotted", 10);
 	line(graphArea, cv::Point(30, graphArea.rows*0.15), cv::Point(30, graphArea.rows*0.95), color, 1);
 	cv::line(graphArea, cv::Point(30, graphArea.rows*0.95), cv::Point(graphArea.cols, graphArea.rows*0.95), color, 1, cv::LINE_8);
-	DrawDashedLine(graphArea, cv::Point(30, graphArea.rows * thline), cv::Point(graphArea.cols, graphArea.rows * thline), green, 1, "dotted", 10);
+	//DrawDashedLine(graphArea, cv::Point(30, graphArea.rows * thline), cv::Point(graphArea.cols, graphArea.rows * thline), green, 1, "dotted", 10);
 }
 
 void Deposition::writeContrastToCSV(const std::string& filename, const std::vector<double>& contrastData, const std::vector<double>& data3, const std::deque<double>& data4, const std::string& xaxis, const std::string& yaxis, const std::string& name3) {
