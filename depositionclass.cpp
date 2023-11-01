@@ -134,45 +134,45 @@ void Deposition::application() {
 			}
 			getelapsedTime(startTime);
 			laserspot(dframe, elapsedTime, fullScreenImage);
-			if (!isComplete && voltage> -1) {
-				if (feedback > BRIGHTNESS) {
+
+			SchmittTrigger schmittTrigger(BRIGHTNESS, LOWER_SD_POINT); // Set upper and lower thresholds
+			bool output = schmittTrigger.processInput(feedback);
+
+			if (!isComplete) {
+				if (voltage<0) {
+					voltage = 0.0;
+					timedelay = 0.0;
+				}
+				if (output && isWithoutredeposition && !isRedeposition) {
+					voltage += VOLTAGE / (numSteps);
+					electrophoretic = 2.0;
+				}
+				if (output && isRedeposition) {
 					voltage += VOLTAGE / (numSteps + timedelay);
 					electrophoretic = 2.0;
 				}
-			}
-			if (!isComplete && voltage >= 0) {
-				if (feedback > BRIGHTNESS) {
-					voltage += VOLTAGE / (numSteps + timedelay);
-					electrophoretic = 2.0;
-				}
-				if (feedback < BRIGHTNESS) {
+				if (!output) {
 					timedelay += 1;
 					voltage -= VOLTAGE / (numSteps*0.25);
 					electrophoretic = 2.0;
+					isRedeposition = true;
+					isWithoutredeposition = false;
 				}
 				if (voltage >= VOLTAGE && !isComplete) {
 					etime = elapsedTime;
 					isComplete = true;
 					voltage -= VOLTAGE / numSteps;
 					electrophoretic = 0.0;
-					writeContrastToCSV(commonPath + exportfile + ".csv", contrastData, grphValues, feed_deque, "No of frame", "Contrast", "PZT volt");
-					std::string mulpani = 
-						"Time,"+double2string(elapsedTime, " ") + "\n" +
-						"THmax," + double2string(etime, "") + "\n" +
-						"file," + exportfile + "\n" +
-						"Height," + double2string(VOLTAGE * 6, "") + "\n" +
-						"C_th," + double2string(BRIGHTNESS, "") + "\n" +
-						"V(micro-m/s)," + double2string(VOLTAGE * 6 / (numSteps + timedelay), "");
-					wToCSV(commonPath + exportfile + "d.csv", mulpani);					
-				}
+					writeContrastToCSV(commonPath + exportfile + "top.csv", contrastData, grphValues, feed_deque, "No of frame", "Contrast", "PZT volt");
+					}
 			}
-			if (isComplete && voltage > 0) {
-				voltage -= VOLTAGE / (numSteps * 0.25);
+			if (isComplete) {
+				voltage -= VOLTAGE / (numSteps * 0.2);
 				electrophoretic = 0.0;
 				if (voltage < 0) {
 					voltage = 0;
 					cv::imwrite(commonPath + exportfile + ".jpg", fullScreenImage);
-					writeContrastToCSV(commonPath + exportfile + "uc.csv", contrastData, grphValues, feed_deque, "No of frame", "Contrast", "PZT volt");
+					writeContrastToCSV(commonPath + exportfile + "sd.csv", contrastData, grphValues, feed_deque, "No of frame", "Contrast", "PZT volt");
 					std::string mulpani =
 						"Time," + double2string(elapsedTime, " ") + "\n" +
 						"THmax," + double2string(etime, "") + "\n" +
@@ -180,7 +180,7 @@ void Deposition::application() {
 						"Height," + double2string(VOLTAGE * 6, "") + "\n" +
 						"C_th," + double2string(BRIGHTNESS, "") + "\n" +
 						"V(micro-m/s)," + double2string(VOLTAGE * 6 / (numSteps + timedelay), "");
-					wToCSV(commonPath + exportfile + "duc.csv", mulpani);
+					wToCSV(commonPath + exportfile + "debug.csv", mulpani);
 
 					cv::destroyWindow(exportfile);
 					break;
@@ -284,7 +284,7 @@ void Deposition::laserspot(cv::Mat& frame, double elapsedTime, cv::Mat& fullScre
 	feedback = stdev(pixData);
 	feed_deque.push_back(feedback);
 	allgraph(graapp, pixData, 1,"Brightness");
-	allgraph(graappix,  feed_deque, 0.4,"SD");
+	allgraph(graappix,  feed_deque, 0.3,"SD");
 	allgraph(heightgraph, grphVa, VOLTAGE,"PZT");
 
 	int barHeight = static_cast<int>((feedback)*100);

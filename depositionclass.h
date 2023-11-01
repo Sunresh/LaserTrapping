@@ -37,6 +37,8 @@ public:
 	int numSteps = TTIME * 100;
 	double etime = 0;
 	bool isComplete = false;
+	bool isRedeposition = false;
+	bool isWithoutredeposition = true;
 	double voltage = 0.0;
 	double electrophoretic = 0.0;
 	cv::Mat frame, dframe, grayColorRect, gRect;

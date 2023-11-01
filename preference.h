@@ -25,7 +25,7 @@ extern int radius;
 extern int XaxisX1;
 extern int YaxisY1;
 extern double VOLTAGE;
-extern double BRIGHTNESS;
+extern double BRIGHTNESS, LOWER_SD_POINT;
 extern int TTIME;
 extern cv::Scalar red;
 extern cv::Scalar white;
@@ -40,13 +40,39 @@ struct UserPreferences {
 	std::string name;
 	double left;
 	double top;
-	double threshold;
+	double threshold, sdlowerpoint;
 	double height;
 	double radius;
 	int time;
 	std::string favoriteColor;
 	double camera;
 };
+class SchmittTrigger {
+public:
+	SchmittTrigger(double upperThreshold, double lowerThreshold)
+		: upperThreshold_(upperThreshold), lowerThreshold_(lowerThreshold), output_(false) {
+	}
+
+	bool processInput(double inputValue) {
+		if (inputValue >= upperThreshold_) {
+			output_ = true;
+		}
+		else if (inputValue <= lowerThreshold_) {
+			output_ = false;
+		}
+		return output_;
+	}
+
+	bool getOutput() const {
+		return output_;
+	}
+
+private:
+	double upperThreshold_;
+	double lowerThreshold_;
+	bool output_;
+};
+
 
 class Pref{
 public:

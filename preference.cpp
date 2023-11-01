@@ -10,7 +10,7 @@ using namespace std;
 cv::Point POINT1, POINT2;
 int radius;
 int XaxisX1, YaxisY1;
-double VOLTAGE, BRIGHTNESS;
+double VOLTAGE, BRIGHTNESS, LOWER_SD_POINT;
 int TTIME;
 cv::Scalar red, white, black,green;
 std::string commonPath;
@@ -19,7 +19,6 @@ char* dev1;
 int CAMERA;
 std::string DesktopFolder;
 std::string LAST_VOLT_FILE;
-
 
 Pref::Pref() : height(),threshold(),time() {
 	PWSTR path;
@@ -47,6 +46,7 @@ Pref::Pref() : height(),threshold(),time() {
 	}
 	VOLTAGE = prefs.height / 6;
 	BRIGHTNESS = prefs.threshold;
+	LOWER_SD_POINT = prefs.sdlowerpoint;
 	TTIME = prefs.time;
 	radius = prefs.radius;
 	XaxisX1 = prefs.left;
@@ -120,7 +120,8 @@ void Pref::saveCSV(const std::string& filename, const UserPreferences& userPrefs
 		<< userPrefs.left << ","
 		<< userPrefs.top << ","
 		<< userPrefs.camera << ","
-		<< userPrefs.radius <<endl;
+		<< userPrefs.radius << ","
+		<< userPrefs.sdlowerpoint <<endl;
 	outFile.close();
 }
 
@@ -148,6 +149,8 @@ bool Pref::loadCSV(const std::string& filename, UserPreferences& userPrefs) {
 	userPrefs.camera = std::stod(value);
 	getline(ss, value, ',');
 	userPrefs.radius = std::stod(value);
+	getline(ss, value, ',');
+	userPrefs.sdlowerpoint = std::stod(value);
 
 	inFile.close();
 	return true;
@@ -192,6 +195,9 @@ void Pref::app(const std::string& filename) {
 		case 'W':
 			getDirectV("CCD cam", userPrefs.camera, "1");
 			break;
+		case 'p':
+			getUserInput("Lower point", userPrefs.sdlowerpoint);
+			break;
 		case 'q':
 			break;
 		default:
@@ -219,6 +225,7 @@ void Pref::startscreen() {
 	std::cout << "\t\t" << "|  l. left:                   " << userPrefs.left << std::string(14, ' ') << "|" << std::endl;
 	std::cout << "\t\t" << "|  t. top:                    " << userPrefs.top << std::string(14, ' ') << "|" << std::endl;
 	std::cout << "\t\t" << "|  r. radius:                 " << userPrefs.radius << std::string(14, ' ') << "|" << std::endl;
+	std::cout << "\t\t" << "|  p. SDLOWp:                 " << userPrefs.sdlowerpoint << std::string(14, ' ') << "|" << std::endl;
 	if (userPrefs.camera == 0) {
 		std::cout << "\t\t" << "|  w. Camera:                 " << "Webcam" << std::string(11, ' ') << "|" << std::endl;
 	}
@@ -349,3 +356,4 @@ void Pref::createDefaultFile(const std::string& filename) {
 
     std::cout << "Default file '" << filename << "' created successfully." << std::endl;
 }
+
