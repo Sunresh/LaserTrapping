@@ -255,18 +255,9 @@ void Deposition::laserspot(cv::Mat& frame, double elapsedTime, cv::Mat& fullScre
 	contrast = bri.avg();
 	contrastData.push_back(contrast);
 
-	cv::resize(grayColorRect, grayColorRect, cv::Size(fwidth / 3, fheight/2));
-	cv::resize(gRect, gRect, cv::Size(fwidth / 3, fheight / 2));
-	cv::resize(dframe, dframe, cv::Size(fwidth / 3, fheight / 2));
-
-	cv::Rect mains(0, 0, dframe.cols, dframe.rows);
-	dframe.copyTo(fullScreenImage(mains));
-
-	cv::Rect grayRectROI(fwidth / 3, 0, grayColorRect.cols, grayColorRect.rows);
-	grayColorRect.copyTo(fullScreenImage(grayRectROI));
-
-	cv::Rect gRectROI(2*fwidth / 3, 0, gRect.cols, gRect.rows);
-	gRect.copyTo(fullScreenImage(gRectROI));
+	copyFrame(dframe, fullScreenImage, 0, 0, fwidth / 3, fheight / 2);//ogiginal camera copy to fullscreen 
+	copyFrame(grayColorRect, fullScreenImage, fwidth / 3, 0, fwidth / 3, fheight / 2);//samall copy to second 
+	copyFrame(gRect, fullScreenImage, 2 * fwidth / 3, 0, fwidth / 3, fheight / 2);//big copy to last 
 
 	cv::Rect firstgraph(0, fheight*0.55, fwidth, fheight*0.15);
 	cv::Mat graapp = fullScreenImage(firstgraph);
@@ -309,6 +300,20 @@ void Deposition::laserspot(cv::Mat& frame, double elapsedTime, cv::Mat& fullScre
 	else {
 		drawRectangle(fullScreenImage, 0, 5, 25, 20, green, -1);
 	}
+}
+void Deposition::copyFrame(cv::Mat& frame, cv::Mat& screenImage, int x, int y, int x2, int y2) {
+	// Validate that x, y, x2, and y2 are non-negative
+	if (x < 0 || y < 0 || x2 < 0 || y2 < 0) {
+		// Handle the error, e.g., print an error message or return early
+		std::cerr << "Error: Invalid coordinates (x, y, x2, y2 must be non-negative)." << std::endl;
+		return;
+	}
+
+	// Resize the frame to the specified dimensions (x2, y2)
+	cv::resize(frame, frame, cv::Size(x2, y2));
+
+	// Copy the resized frame into the screenImage at the specified position (x, y)
+	frame.copyTo(screenImage(cv::Rect(x, y, frame.cols, frame.rows)));
 }
 
 void Deposition::allgraph(cv::Mat& frame, const std::deque<double>& graphValues,double upperLimit, const std::string& yxix) {

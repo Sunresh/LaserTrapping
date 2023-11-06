@@ -57,6 +57,7 @@ public:
 	std::string Deposition::double2string(const double& value, const std::string& stri);
 	double Deposition::stdev(std::deque<double> pixData);
 	void Deposition::wToCSV(const std::string& filename, const std::string& name);
+	void Deposition::copyFrame(cv::Mat& frame, cv::Mat& screenImage, int x, int y, int x2, int y2);
 };
 
 #endif // DEPOSITIONCLASS_H
