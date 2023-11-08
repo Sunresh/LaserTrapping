@@ -1,7 +1,6 @@
 #ifndef PREFERENCE_H
 #define PREFERENCE_H
 
-
 #include <NIDAQmx.h>
 #include <string>
 #include <vector>
@@ -38,12 +37,7 @@ extern int CAMERA;
 
 struct UserPreferences {
 	std::string name;
-	double left;
-	double top;
-	double threshold, sdlowerpoint;
-	double height;
-	double radius;
-	int time;
+	double left, top, threshold, sdlowerpoint, height, radius, time;
 	std::string favoriteColor;
 	double camera;
 };
@@ -98,9 +92,7 @@ public:
 	void Pref::setHeight(int newHeight);
 	int getHeight() const;
 private:
-	int height;
-	double threshold;
-	int time;
+	double height,threshold, time;
 
 };
 
