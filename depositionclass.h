@@ -15,10 +15,9 @@ private:
 	cv::VideoCapture cam;
 	TaskHandle task1 = nullptr;
 	TaskHandle task2 = nullptr;
-	double contrast = 1.0,feedback= 0;
+	double feedback= 0;
 	int fwidth;
 	int fheight;
-	double averagediff;
 public:
 	Pref pr;
 	Deposition();
@@ -36,6 +35,7 @@ public:
 	void Deposition::laserspot(cv::Mat& dframe, double elapsedTime, cv::Mat& fullscreenimage);
 	int numSteps = TTIME * 100;
 	double etime = 0;
+	double averagediff, cBR, cHT;
 	bool isComplete = false;
 	bool isRedeposition = false;
 	bool isWithoutredeposition = true;
@@ -58,6 +58,12 @@ public:
 	double Deposition::stdev(std::deque<double> pixData);
 	void Deposition::wToCSV(const std::string& filename, const std::string& name);
 	void Deposition::copyFrame(cv::Mat& frame, cv::Mat& screenImage, int x, int y, int x2, int y2);
+	void Deposition::setcurrentBrightness(cv::Mat& frame);
+	double Deposition::getcurrentBrightness();
+	void Deposition::setcurrentHeight(double voltage);
+	double Deposition::getcurrentHeight();
+	bool isCameraOnly;
+
 };
 
 #endif // DEPOSITIONCLASS_H

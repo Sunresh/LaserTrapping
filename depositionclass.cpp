@@ -2,7 +2,7 @@
 #include <conio.h>
 #include "preference.h"
 
-Deposition::Deposition() : fwidth(1200),fheight(750),exportfile(), elapsedTime(), averagediff(0){
+Deposition::Deposition() : fwidth(1200),fheight(750),exportfile(), elapsedTime(), averagediff(0),cBR(0),cHT(0),isCameraOnly(false){
 	fwidth = GetSystemMetrics(SM_CXSCREEN)-10;
 	fheight = GetSystemMetrics(SM_CYSCREEN)-90;
 	double v1 = 0.0;
@@ -62,6 +62,21 @@ void Deposition::setOutputFileName(std::string filename = commonPath) {
 std::string Deposition::getOutputFileName() const {
 	return exportfile;
 }
+void Deposition::setcurrentBrightness(cv::Mat& frame) {
+	BrightnessClass bri(frame);
+	double contrast = bri.avg();
+	cBR = contrast;
+}
+double Deposition::getcurrentBrightness() {
+	return cBR;
+}
+void Deposition::setcurrentHeight(double voltage) {
+	double height = 6*voltage;
+	cHT = height;
+}
+double Deposition::getcurrentHeight() {
+	return cHT;
+}
 void Deposition::getelapsedTime(std::chrono::time_point<std::chrono::high_resolution_clock> startTime) {
 	auto currentTime = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double> elapsed = currentTime - startTime;
@@ -80,36 +95,8 @@ Deposition::~Deposition() {
 	cout << "End"<<endl;
 }
 void Deposition::camera() {
-	try {
-		if (!cam.isOpened()) {
-			return;
-		}
-		auto startTime = std::chrono::high_resolution_clock::now();
-		cv::Mat fullScreenImage(fheight, fwidth, CV_8UC3, white);
-		while (true) {
-			cam >> frame;
-			if (frame.empty()) {
-				break;
-			}
-			getelapsedTime(startTime);
-			laserspot(frame, elapsedTime, fullScreenImage);
-			cv::imshow("Status of deposition", fullScreenImage);
-			cv::moveWindow("Status of deposition", 0, 0);
-			cv::setMouseCallback("Status of deposition", Deposition::onMouse, &fullScreenImage);
-			char key = cv::waitKey(1);
-			if (key == 'q' || key == ' ') {
-				cam.release();
-				cv::destroyAllWindows();
-				break;
-			}
-		}
-	}
-	catch (const std::exception& e) {
-		std::cerr << "\nAn exception occurred: \n" << e.what() << "\n\n" << std::endl;
-	}
-	catch (...) {
-		std::cerr << "\nAn unknown exception occurred.\n" << std::endl;
-	}
+	isCameraOnly = true;
+	application();
 }
 
 void Deposition::application() {
@@ -117,13 +104,14 @@ void Deposition::application() {
 		if (!cam.isOpened()) {
 			return;
 		}
-		DAQmxCreateTask("", &task1);
-		DAQmxCreateTask("", &task2);
-		DAQmxCreateAOVoltageChan(task1, dev1, "ao_channel", 0.0, 5.0, DAQmx_Val_Volts, nullptr);
-		DAQmxCreateAOVoltageChan(task2, dev0, "ao_channel", 0.0, 5.0, DAQmx_Val_Volts, nullptr);
-		DAQmxCfgSampClkTiming(task1, "", 10.0, DAQmx_Val_Rising, DAQmx_Val_ContSamps, 1);
-		DAQmxCfgSampClkTiming(task2, "", 10.0, DAQmx_Val_Rising, DAQmx_Val_ContSamps, 1);
-
+		if (!isCameraOnly) {
+			DAQmxCreateTask("", &task1);
+			DAQmxCreateTask("", &task2);
+			DAQmxCreateAOVoltageChan(task1, dev1, "ao_channel", 0.0, 5.0, DAQmx_Val_Volts, nullptr);
+			DAQmxCreateAOVoltageChan(task2, dev0, "ao_channel", 0.0, 5.0, DAQmx_Val_Volts, nullptr);
+			DAQmxCfgSampClkTiming(task1, "", 10.0, DAQmx_Val_Rising, DAQmx_Val_ContSamps, 1);
+			DAQmxCfgSampClkTiming(task2, "", 10.0, DAQmx_Val_Rising, DAQmx_Val_ContSamps, 1);
+		}
 		auto startTime = std::chrono::high_resolution_clock::now();
 		cv::Mat fullScreenImage(fheight, fwidth, CV_8UC3, white);
 		setOutputFileName();
@@ -134,63 +122,64 @@ void Deposition::application() {
 			}
 			getelapsedTime(startTime);
 			laserspot(dframe, elapsedTime, fullScreenImage);
-
 			SchmittTrigger schmittTrigger(BRIGHTNESS, LOWER_SD_POINT); // Set upper and lower thresholds
 			bool output = schmittTrigger.processInput(feedback);
-
-			if (!isComplete) {
-				if (voltage<0) {
-					voltage = 0.0;
-					timedelay = 0.0;
-				}
-				if (output && isWithoutredeposition && !isRedeposition) {
-					voltage += VOLTAGE / (numSteps);
-					electrophoretic = 2.0;
-				}
-				if (output && isRedeposition) {
-					voltage += VOLTAGE / (numSteps + timedelay);
-					electrophoretic = 2.0;
-				}
-				if (!output) {
-					timedelay += 1;
-					voltage -= VOLTAGE / (numSteps*0.25);
-					electrophoretic = 2.0;
-					isRedeposition = true;
-					isWithoutredeposition = false;
-				}
-				if (voltage >= VOLTAGE && !isComplete) {
-					etime = elapsedTime;
-					isComplete = true;
-					voltage -= VOLTAGE / numSteps;
-					electrophoretic = 0.0;
-					writeContrastToCSV(commonPath + exportfile + "top.csv", contrastData, grphValues, feed_deque, "No of frame", "Contrast", "PZT volt");
+			if (!isCameraOnly) {
+				if (!isComplete) {
+					if (voltage < 0) {
+						setcurrentHeight(voltage = 0.0);
+						timedelay = 0.0;
 					}
-			}
-			if (isComplete) {
-				voltage -= VOLTAGE / (numSteps * 0.2);
-				electrophoretic = 0.0;
-				if (voltage < 0) {
-					voltage = 0;
-					cv::imwrite(commonPath + exportfile + ".jpg", fullScreenImage);
-					writeContrastToCSV(commonPath + exportfile + "sd.csv", contrastData, grphValues, feed_deque, "No of frame", "Contrast", "PZT volt");
-					std::string mulpani =
-						"Time," + double2string(elapsedTime, " ") + "\n" +
-						"THmax," + double2string(etime, "") + "\n" +
-						"file," + exportfile + "\n" +
-						"Height," + double2string(VOLTAGE * 6, "") + "\n" +
-						"C_th," + double2string(BRIGHTNESS, "") + "\n" +
-						"V(micro-m/s)," + double2string(VOLTAGE * 6 / (numSteps + timedelay), "");
-					wToCSV(commonPath + exportfile + "debug.csv", mulpani);
-
-					cv::destroyWindow(exportfile);
-					break;
+					if (output && isWithoutredeposition && !isRedeposition) {
+						setcurrentHeight(voltage += VOLTAGE / (numSteps));
+						electrophoretic = 2.0;
+					}
+					if (output && isRedeposition) {
+						setcurrentHeight(voltage += VOLTAGE / (numSteps + timedelay));
+						electrophoretic = 2.0;
+					}
+					if (!output) {
+						timedelay += 1;
+						setcurrentHeight(voltage -= VOLTAGE / (numSteps * 0.25));
+						electrophoretic = 2.0;
+						isRedeposition = true;
+						isWithoutredeposition = false;
+					}
+					if (voltage >= VOLTAGE && !isComplete) {
+						etime = elapsedTime;
+						isComplete = true;
+						setcurrentHeight(voltage -= VOLTAGE / numSteps);
+						electrophoretic = 0.0;
+						writeContrastToCSV(commonPath + exportfile + "top.csv", contrastData, grphValues, feed_deque, "No of frame", "Contrast", "PZT volt");
+					}
 				}
+				if (isComplete) {
+					setcurrentHeight(voltage -= VOLTAGE / (numSteps * 0.2));
+					electrophoretic = 0.0;
+					if (voltage < 0) {
+						setcurrentHeight(0);
+						cv::imwrite(commonPath + exportfile + ".jpg", fullScreenImage);
+						writeContrastToCSV(commonPath + exportfile + "sd.csv", contrastData, grphValues, feed_deque, "No of frame", "Contrast", "PZT volt");
+						std::string mulpani =
+							"Time," + double2string(elapsedTime, " ") + "\n" +
+							"THmax," + double2string(etime, "") + "\n" +
+							"file," + exportfile + "\n" +
+							"Height," + double2string(VOLTAGE * 6, "") + "\n" +
+							"C_th," + double2string(BRIGHTNESS, "") + "\n" +
+							"V(micro-m/s)," + double2string(VOLTAGE * 6 / (numSteps + timedelay), "");
+						wToCSV(commonPath + exportfile + "debug.csv", mulpani);
+
+						cv::destroyWindow(exportfile);
+						break;
+					}
+				}
+				DAQmxWriteAnalogF64(task2, 1, true, 10.0, DAQmx_Val_GroupByChannel, &electrophoretic, nullptr, nullptr);
+				DAQmxWriteAnalogF64(task1, 1, true, 10.0, DAQmx_Val_GroupByChannel, &voltage, nullptr, nullptr);
+
+				grphValues.push_back(voltage);
+				grphVa.push_back(voltage);
+				pr.simpleCSVsave(LAST_VOLT_FILE, voltage);
 			}
-			DAQmxWriteAnalogF64(task2, 1, true, 10.0, DAQmx_Val_GroupByChannel, &electrophoretic, nullptr, nullptr);
-			DAQmxWriteAnalogF64(task1, 1, true, 10.0, DAQmx_Val_GroupByChannel, &voltage, nullptr, nullptr);
-			grphValues.push_back(voltage);
-			grphVa.push_back(voltage);
-			pr.simpleCSVsave(LAST_VOLT_FILE, voltage);
 			cv::imshow(exportfile, fullScreenImage);
 			cv::moveWindow(exportfile, 0, 0);
 			char key = cv::waitKey(1);
@@ -251,24 +240,28 @@ void Deposition::laserspot(cv::Mat& frame, double elapsedTime, cv::Mat& fullScre
 	grayColorRect = dframe(roiRect);//crop
 	gRect = dframe(rRect);//crop
 
-	BrightnessClass bri(grayColorRect);
-	contrast = bri.avg();
-	contrastData.push_back(contrast);
+	setcurrentBrightness(grayColorRect);
+	contrastData.push_back(getcurrentBrightness());
 
 	copyFrame(dframe, fullScreenImage, 0, 0, fwidth / 3, fheight / 2);//ogiginal camera copy to fullscreen 
 	copyFrame(grayColorRect, fullScreenImage, fwidth / 3, 0, fwidth / 3, fheight / 2);//samall copy to second 
 	copyFrame(gRect, fullScreenImage, 2 * fwidth / 3, 0, fwidth / 3, fheight / 2);//big copy to last 
 
-	cv::Rect firstgraph(0, fheight*0.55, fwidth, fheight*0.15);
+	cv::Rect firstgraph(0, fheight*0.55, fwidth*0.75, fheight*0.15);
 	cv::Mat graapp = fullScreenImage(firstgraph);
 
-	cv::Rect secondgraph(0, fheight * 0.70, fwidth, fheight*0.15);//x1,y1,w,h
+	cv::Rect secondgraph(0, fheight * 0.70, fwidth*0.75, fheight*0.15);//x1,y1,w,h
 	cv::Mat graappix = fullScreenImage(secondgraph);
 
-	cv::Rect thirdgraph(0, fheight * 0.85, fwidth, fheight*0.15);
+	cv::Rect thirdgraph(0, fheight * 0.85, fwidth*0.75, fheight*0.15);
 	cv::Mat heightgraph = fullScreenImage(thirdgraph);
 
-	pixData.push_back(contrast);
+	cv::Rect infoarea(fwidth * 0.75, fheight * 0.55, fwidth * 0.25, fheight * 0.45);
+	cv::Mat information = fullScreenImage(infoarea);
+	information = cv::Mat::ones(information.size(), information.type())*100;
+
+
+	pixData.push_back(getcurrentBrightness());
 	/*if (pixData.size() > (fwidth - 30)) {
 		pixData.pop_front();
 	}*/
@@ -286,19 +279,26 @@ void Deposition::laserspot(cv::Mat& frame, double elapsedTime, cv::Mat& fullScre
 	int highestvalueofvoltage = 100;
 	Deposition::drawRectangle(fullScreenImage, 0, VOLTAGE*100 - (barHe), 5, VOLTAGE*100, green, -1);
 
-	std::string timeStr = double2string(elapsedTime, "T: ") +
-		double2string(etime, " /THmax: ") +" /file:" + exportfile +
-		double2string(VOLTAGE * 6, " /Height: ") +
-		double2string(BRIGHTNESS, " /C_th: ") +
-		double2string(VOLTAGE * 6 / (numSteps + timedelay), " /V(micro-m/s): ");
-
-	drawText(fullScreenImage, timeStr, 0, 30, 0.5, red, 1);
-	
+	int y = 30;
+	drawText(information, double2string(elapsedTime, "T: "), 0, y, 0.5, red, 1);
+	y += 30;
+	drawText(information, double2string(etime, "THmax: "), 0, y, 0.5, red, 1);
+	y += 30;
+	drawText(information, double2string(VOLTAGE * 6, "Height: "), 0, y, 0.5, red, 1);
+	y += 30;
+	drawText(information, double2string(cHT, "cHeight: "), 0, y, 0.5, red, 1);
+	y += 30;
+	drawText(information, double2string(BRIGHTNESS, "C_th: "), 0, y, 0.5, red, 1);
+	y += 30;
+	drawText(information, double2string(VOLTAGE * 6 / (numSteps + timedelay), "V(micro-m/s): "), 0, y, 0.5, red, 1);
+	y += 30;
+	drawText(information, "file:" + exportfile, 0, y, 0.5, red, 1);
+	y += 30;
 	if (electrophoretic == 0.0) {
-		drawRectangle(fullScreenImage, 0, 5, 25, 20, red, -1);
+		drawRectangle(information, 0, y, 25, y+20, red, -1);
 	}
 	else {
-		drawRectangle(fullScreenImage, 0, 5, 25, 20, green, -1);
+		drawRectangle(information, 0, y, 25, y+20, green, -1);
 	}
 }
 void Deposition::copyFrame(cv::Mat& frame, cv::Mat& screenImage, int x, int y, int x2, int y2) {
@@ -308,10 +308,8 @@ void Deposition::copyFrame(cv::Mat& frame, cv::Mat& screenImage, int x, int y, i
 		std::cerr << "Error: Invalid coordinates (x, y, x2, y2 must be non-negative)." << std::endl;
 		return;
 	}
-
 	// Resize the frame to the specified dimensions (x2, y2)
 	cv::resize(frame, frame, cv::Size(x2, y2));
-
 	// Copy the resized frame into the screenImage at the specified position (x, y)
 	frame.copyTo(screenImage(cv::Rect(x, y, frame.cols, frame.rows)));
 }
@@ -373,7 +371,6 @@ void Deposition::writeContrastToCSV(const std::string& filename, const std::vect
 			min_value = value;
 		}
 	}
-
 	for (size_t i = 0; i < maxSize; ++i) {
 		outFile << i + 1 << ",";
 		if (i < contrastData.size()) {
@@ -410,7 +407,6 @@ void Deposition::DrawDashedLine(cv::Mat& img, cv::Point pt1, cv::Point pt2,cv::S
 	float dx = pt1.x - pt2.x;
 	float dy = pt1.y - pt2.y;
 	float dist = std::hypot(dx, dy);
-
 	std::vector<cv::Point> pts;
 	for (int i = 0; i < dist; i += gap) {
 		float r = static_cast<float>(i / dist);
@@ -418,9 +414,7 @@ void Deposition::DrawDashedLine(cv::Mat& img, cv::Point pt1, cv::Point pt2,cv::S
 		int y = static_cast<int>((pt1.y * (1.0 - r) + pt2.y * r) + .5);
 		pts.emplace_back(x, y);
 	}
-
 	int pts_size = pts.size();
-
 	if (style == "dotted") {
 		for (int i = 0; i < pts_size; ++i) {
 			cv::circle(img, pts[i], thickness, color, -1);
@@ -448,7 +442,6 @@ double Deposition::stdev(std::deque<double> pixData) {
 	double variance = 0.0;
 	double mean = 0;
 	int expectedsize = 30;
-
 	//cout << "\nsize - " << size << endl;
 	if (pixData.empty()) {
 		return 0.0;
