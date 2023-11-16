@@ -262,9 +262,7 @@ void Deposition::laserspot(cv::Mat& frame, double elapsedTime, cv::Mat& fullScre
 
 
 	pixData.push_back(getcurrentBrightness());
-	/*if (pixData.size() > (fwidth - 30)) {
-		pixData.pop_front();
-	}*/
+	
 	feedback = stdev(pixData);
 	feed_deque.push_back(feedback);
 	allgraph(graapp, pixData, 1,"Brightness");
@@ -314,20 +312,28 @@ void Deposition::copyFrame(cv::Mat& frame, cv::Mat& screenImage, int x, int y, i
 	frame.copyTo(screenImage(cv::Rect(x, y, frame.cols, frame.rows)));
 }
 
-void Deposition::allgraph(cv::Mat& frame, const std::deque<double>& graphValues,double upperLimit, const std::string& yxix) {
+void Deposition::allgraph(cv::Mat& frame, std::deque<double>& graphValues,double upperLimit, const std::string& yxix) {
 	const int startPointX = 30;
 	if (graphValues.empty()) {
 		return;
 	}
 	int height = frame.rows;
 	int width = frame.cols;
+	if (graphValues.size() >= width - startPointX) {
+		graphValues.pop_front();
+	}
 	cv::Point startPoint(startPointX, height * 0.5);
+	frame = cv::Scalar(255, 255, 255);
+
 	for (int i = 0; i < graphValues.size(); ++i) {
 		double y = (graphValues[i] / upperLimit) * (height*0.8)+ 10;
 		cv::Point endPoint(i + startPointX, height - static_cast<int>(y));
 		line(frame, startPoint, endPoint, cv::Scalar(0, 0, 0), 1);
 		startPoint = endPoint;
 	}
+	//double newYValue = 50;
+	//graphValues.push_back(newYValue);
+
 	drawYAxisValues(frame, black, upperLimit, yxix);
 	drawXAxis(frame, black);
 }
@@ -441,7 +447,7 @@ double Deposition::stdev(std::deque<double> pixData) {
 	int countLastFive = 0;
 	double variance = 0.0;
 	double mean = 0;
-	int expectedsize = 30;
+	int expectedsize = 25;
 	//cout << "\nsize - " << size << endl;
 	if (pixData.empty()) {
 		return 0.0;
