@@ -15,7 +15,7 @@ add_executable(${PROJECT_NAME}
 	"MainWindow.cpp" 
 	"MainWindow.h"   
 	"brightnessclass.h" 
-	"brightnessclass.cpp")
+	"brightnessclass.cpp" "daqanalog.h")
 link_directories("C:/opencv/build/x64/v16/lib")
 target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS} ${NIDAQmx_LIBRARY} )
 target_include_directories(${PROJECT_NAME} PRIVATE ${OpenCV_INCLUDE_DIRS})

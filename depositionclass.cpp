@@ -4,21 +4,14 @@
 
 Deposition::Deposition() : 
 	fwidth(1200),fheight(750),exportfile(), elapsedTime(),
-	averagediff(0),cBR(0),cHT(0),isCameraOnly(false)
+	averagediff(0),cBR(0),cHT(0),isCameraOnly(false), isFeedbackstart(false)
 {
 	fwidth = GetSystemMetrics(SM_CXSCREEN)-10;
 	fheight = GetSystemMetrics(SM_CYSCREEN)-90;
-	double v1 = 0.0;
-	DAQmxCreateTask("", &task1);
-	DAQmxCreateTask("", &task2);
-	DAQmxCreateAOVoltageChan(task1, dev1, "ao_channel", 0.0, 5.0, DAQmx_Val_Volts, nullptr);
-	DAQmxCreateAOVoltageChan(task2, dev0, "ao_channel", 0.0, 5.0, DAQmx_Val_Volts, nullptr);
-	DAQmxCfgSampClkTiming(task1, "", 10.0, DAQmx_Val_Rising, DAQmx_Val_ContSamps, 1);
-	DAQmxCfgSampClkTiming(task2, "", 10.0, DAQmx_Val_Rising, DAQmx_Val_ContSamps, 1);
-	DAQmxWriteAnalogF64(task2, 1, true, 10.0, DAQmx_Val_GroupByChannel, &v1, nullptr, nullptr);
-	DAQmxWriteAnalogF64(task1, 1, true, 10.0, DAQmx_Val_GroupByChannel, &v1, nullptr, nullptr);
-	DAQmxClearTask(task1);
-	DAQmxClearTask(task2);
+	
+	mydaq.start(nullptr, "dev0", 0);
+	mydaq.start(nullptr, "dev1", 0);
+	
 	cam.open(CAMERA);
 
 	int numSteps = TTIME * 100;
@@ -80,6 +73,9 @@ void Deposition::setcurrentHeight(double voltage) {
 double Deposition::getcurrentHeight() {
 	return cHT;
 }
+double Deposition::feedbackSD() {
+	return stdev(pixData);
+}
 void Deposition::getelapsedTime(std::chrono::time_point<std::chrono::high_resolution_clock> startTime) {
 	auto currentTime = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double> elapsed = currentTime - startTime;
@@ -126,9 +122,29 @@ void Deposition::application() {
 			getelapsedTime(startTime);
 			laserspot(dframe, elapsedTime, fullScreenImage);
 			SchmittTrigger schmittTrigger(BRIGHTNESS, LOWER_SD_POINT); // Set upper and lower thresholds
-			bool output = schmittTrigger.processInput(feedback);
+			bool output = schmittTrigger.processInput(feedbackSD());
 			if (!isCameraOnly) {
-				if (!isComplete) {
+				contrastData.push_back(getcurrentBrightness());
+				pixData.push_back(getcurrentBrightness());
+				feed_deque.push_back(feedbackSD());
+				if (!isComplete && !isFeedbackstart) {
+					if (voltage < 0) {
+						voltage = 0.0;
+						timedelay = 0.0;
+					}
+					if ( isWithoutredeposition && !isRedeposition) {
+						voltage += pr.maxVolt() / (numSteps);
+						electrophoretic = 2.0;
+					}
+					if (voltage >= pr.maxVolt() && !isComplete) {
+						etime = elapsedTime;
+						isComplete = true;
+						voltage -= pr.maxVolt() / numSteps;
+						electrophoretic = 0.0;
+						writeContrastToCSV(commonPath + exportfile + "top.csv", contrastData, grphValues, feed_deque, "No of frame", "Contrast", "PZT volt");
+					}
+				}
+				if (!isComplete && isFeedbackstart) {
 					if (voltage < 0) {
 						voltage = 0.0;
 						timedelay = 0.0;
@@ -196,6 +212,9 @@ void Deposition::application() {
 					break;
 				}
 			}
+			if (key == 'n') {
+				isFeedbackstart = true;
+			}
 		}
 		DAQmxClearTask(task1);
 		DAQmxClearTask(task2);
@@ -244,7 +263,6 @@ void Deposition::laserspot(cv::Mat& frame, double elapsedTime, cv::Mat& fullScre
 	gRect = dframe(rRect);//crop
 
 	setcurrentBrightness(grayColorRect);
-	contrastData.push_back(getcurrentBrightness());
 
 	copyFrame(dframe, fullScreenImage, 0, 0, fwidth / 3, fheight / 2);//ogiginal camera copy to fullscreen 
 	copyFrame(grayColorRect, fullScreenImage, fwidth / 3, 0, fwidth / 3, fheight / 2);//samall copy to second 
@@ -263,16 +281,11 @@ void Deposition::laserspot(cv::Mat& frame, double elapsedTime, cv::Mat& fullScre
 	cv::Mat information = fullScreenImage(infoarea);
 	information = cv::Mat::ones(information.size(), information.type())*100;
 
-
-	pixData.push_back(getcurrentBrightness());
-	
-	feedback = stdev(pixData);
-	feed_deque.push_back(feedback);
 	allgraph(graapp, pixData, 1,"Brightness");
 	allgraph(graappix,  feed_deque, 0.3,"SD");
 	allgraph(heightgraph, grphVa, pr.maxVolt(),"PZT");
 
-	int barHeight = static_cast<int>((feedback)*100);
+	int barHeight = static_cast<int>((feedbackSD())*100);
 	int hightofbrightness = 100;
 	Deposition::drawRectangle(fullScreenImage, fullScreenImage.cols * 0.99, fullScreenImage.rows * 0.5 - barHeight, fullScreenImage.cols, fullScreenImage.rows * 0.5, red, -1);
 
@@ -290,6 +303,10 @@ void Deposition::laserspot(cv::Mat& frame, double elapsedTime, cv::Mat& fullScre
 	drawText(information, double2string(cHT, "cHeight: "), 0, y, 0.5, red, 1);
 	y += 30;
 	drawText(information, double2string(BRIGHTNESS, "C_th: "), 0, y, 0.5, red, 1);
+	y += 30;
+	drawText(information, double2string(getcurrentBrightness(), "Brightness: "), 0, y, 0.5, red, 1);
+	y += 30;
+	drawText(information, double2string(feedbackSD(), "SD: "), 0, y, 0.5, red, 1);
 	y += 30;
 	drawText(information, double2string(pr.maxVolt() * 6 / (numSteps + timedelay), "V(micro-m/s): "), 0, y, 0.5, red, 1);
 	y += 30;

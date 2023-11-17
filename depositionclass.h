@@ -7,17 +7,19 @@
 #include <fstream>
 #include "preference.h"
 #include "brightnessclass.h"
+#include "daqanalog.h"
 
 using namespace std;
 
 class Deposition {
 private:
 	cv::VideoCapture cam;
+	MyDaq mydaq;
 	TaskHandle task1 = nullptr;
 	TaskHandle task2 = nullptr;
-	double feedback= 0;
 	int fwidth;
 	int fheight;
+	bool isFeedbackstart;
 public:
 	Pref pr;
 	Deposition();
@@ -63,6 +65,7 @@ public:
 	void Deposition::setcurrentHeight(double voltage);
 	double Deposition::getcurrentHeight();
 	bool isCameraOnly;
+	double Deposition::feedbackSD();
 
 };
 
