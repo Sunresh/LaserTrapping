@@ -2,7 +2,10 @@
 #include <conio.h>
 #include "preference.h"
 
-Deposition::Deposition() : fwidth(1200),fheight(750),exportfile(), elapsedTime(), averagediff(0),cBR(0),cHT(0),isCameraOnly(false){
+Deposition::Deposition() : 
+	fwidth(1200),fheight(750),exportfile(), elapsedTime(),
+	averagediff(0),cBR(0),cHT(0),isCameraOnly(false)
+{
 	fwidth = GetSystemMetrics(SM_CXSCREEN)-10;
 	fheight = GetSystemMetrics(SM_CYSCREEN)-90;
 	double v1 = 0.0;
@@ -127,46 +130,46 @@ void Deposition::application() {
 			if (!isCameraOnly) {
 				if (!isComplete) {
 					if (voltage < 0) {
-						setcurrentHeight(voltage = 0.0);
+						voltage = 0.0;
 						timedelay = 0.0;
 					}
 					if (output && isWithoutredeposition && !isRedeposition) {
-						setcurrentHeight(voltage += VOLTAGE / (numSteps));
+						voltage += pr.maxVolt() / (numSteps);
 						electrophoretic = 2.0;
 					}
 					if (output && isRedeposition) {
-						setcurrentHeight(voltage += VOLTAGE / (numSteps + timedelay));
+						voltage += pr.maxVolt() / (numSteps + timedelay);
 						electrophoretic = 2.0;
 					}
 					if (!output) {
 						timedelay += 1;
-						setcurrentHeight(voltage -= VOLTAGE / (numSteps * 0.25));
+						voltage -= pr.maxVolt() / (numSteps * 0.25);
 						electrophoretic = 2.0;
 						isRedeposition = true;
 						isWithoutredeposition = false;
 					}
-					if (voltage >= VOLTAGE && !isComplete) {
+					if (voltage >= pr.maxVolt() && !isComplete) {
 						etime = elapsedTime;
 						isComplete = true;
-						setcurrentHeight(voltage -= VOLTAGE / numSteps);
+						voltage -= pr.maxVolt() / numSteps;
 						electrophoretic = 0.0;
 						writeContrastToCSV(commonPath + exportfile + "top.csv", contrastData, grphValues, feed_deque, "No of frame", "Contrast", "PZT volt");
 					}
 				}
 				if (isComplete) {
-					setcurrentHeight(voltage -= VOLTAGE / (numSteps * 0.2));
+					voltage -= pr.maxVolt() / (numSteps * 0.2);
 					electrophoretic = 0.0;
 					if (voltage < 0) {
-						setcurrentHeight(0);
+						voltage = 0;
 						cv::imwrite(commonPath + exportfile + ".jpg", fullScreenImage);
 						writeContrastToCSV(commonPath + exportfile + "sd.csv", contrastData, grphValues, feed_deque, "No of frame", "Contrast", "PZT volt");
 						std::string mulpani =
 							"Time," + double2string(elapsedTime, " ") + "\n" +
 							"THmax," + double2string(etime, "") + "\n" +
 							"file," + exportfile + "\n" +
-							"Height," + double2string(VOLTAGE * 6, "") + "\n" +
+							"Height," + double2string(pr.maxVolt() * 6, "") + "\n" +
 							"C_th," + double2string(BRIGHTNESS, "") + "\n" +
-							"V(micro-m/s)," + double2string(VOLTAGE * 6 / (numSteps + timedelay), "");
+							"V(micro-m/s)," + double2string(pr.maxVolt() * 6 / (numSteps + timedelay), "");
 						wToCSV(commonPath + exportfile + "debug.csv", mulpani);
 
 						cv::destroyWindow(exportfile);
@@ -185,7 +188,7 @@ void Deposition::application() {
 			char key = cv::waitKey(1);
 			if (key == 'q' || key == ' ') {
 				isComplete = true;
-				voltage -= VOLTAGE / (numSteps * 0.1);
+				voltage -= pr.maxVolt() / (numSteps * 0.1);
 				electrophoretic = 0.0;
 				if (voltage < 0) {
 					cam.release();
@@ -267,7 +270,7 @@ void Deposition::laserspot(cv::Mat& frame, double elapsedTime, cv::Mat& fullScre
 	feed_deque.push_back(feedback);
 	allgraph(graapp, pixData, 1,"Brightness");
 	allgraph(graappix,  feed_deque, 0.3,"SD");
-	allgraph(heightgraph, grphVa, VOLTAGE,"PZT");
+	allgraph(heightgraph, grphVa, pr.maxVolt(),"PZT");
 
 	int barHeight = static_cast<int>((feedback)*100);
 	int hightofbrightness = 100;
@@ -275,20 +278,20 @@ void Deposition::laserspot(cv::Mat& frame, double elapsedTime, cv::Mat& fullScre
 
 	int barHe = static_cast<double>((voltage)*100);
 	int highestvalueofvoltage = 100;
-	Deposition::drawRectangle(fullScreenImage, 0, VOLTAGE*100 - (barHe), 5, VOLTAGE*100, green, -1);
+	Deposition::drawRectangle(fullScreenImage, 0, pr.maxVolt() *100 - (barHe), 5, pr.maxVolt() *100, green, -1);
 
 	int y = 30;
 	drawText(information, double2string(elapsedTime, "T: "), 0, y, 0.5, red, 1);
 	y += 30;
 	drawText(information, double2string(etime, "THmax: "), 0, y, 0.5, red, 1);
 	y += 30;
-	drawText(information, double2string(VOLTAGE * 6, "Height: "), 0, y, 0.5, red, 1);
+	drawText(information, double2string(pr.maxVolt() * 6, "Height: "), 0, y, 0.5, red, 1);
 	y += 30;
 	drawText(information, double2string(cHT, "cHeight: "), 0, y, 0.5, red, 1);
 	y += 30;
 	drawText(information, double2string(BRIGHTNESS, "C_th: "), 0, y, 0.5, red, 1);
 	y += 30;
-	drawText(information, double2string(VOLTAGE * 6 / (numSteps + timedelay), "V(micro-m/s): "), 0, y, 0.5, red, 1);
+	drawText(information, double2string(pr.maxVolt() * 6 / (numSteps + timedelay), "V(micro-m/s): "), 0, y, 0.5, red, 1);
 	y += 30;
 	drawText(information, "file:" + exportfile, 0, y, 0.5, red, 1);
 	y += 30;

@@ -10,7 +10,7 @@ using namespace std;
 cv::Point POINT1, POINT2;
 int radius;
 int XaxisX1, YaxisY1;
-double VOLTAGE, BRIGHTNESS, LOWER_SD_POINT;
+double BRIGHTNESS, LOWER_SD_POINT;
 int TTIME;
 cv::Scalar red, white, black,green;
 std::string commonPath;
@@ -44,7 +44,6 @@ Pref::Pref() : height(),threshold(),time() {
 	else {
 		loadCSV(PREF_FILE, prefs);
 	}
-	VOLTAGE = prefs.height / 6;
 	BRIGHTNESS = prefs.threshold;
 	LOWER_SD_POINT = prefs.sdlowerpoint;
 	TTIME = prefs.time;
@@ -54,6 +53,17 @@ Pref::Pref() : height(),threshold(),time() {
 	POINT1 = cv::Point(XaxisX1, YaxisY1);
 	POINT2 = cv::Point(XaxisX1 + radius, YaxisY1 + radius);
 	CAMERA = prefs.camera;
+}
+
+double Pref :: maxVolt() {
+	UserPreferences prefs;
+	if (!loadCSV(PREF_FILE, prefs)) {
+		std::cerr << "No preferences found or error reading preferences. Creating with default values." << std::endl;
+	}
+	else {
+		loadCSV(PREF_FILE, prefs);
+	}
+	return prefs.height / 6;
 }
 
 void Pref::setHeight(int newHeight) {
@@ -344,16 +354,13 @@ void Pref::slowlyslowly(std::string& filename) {
 
 void Pref::createDefaultFile(const std::string& filename) {
     std::ofstream outFile(filename);
-
     if (!outFile.is_open()) {
         std::cerr << "Error: Unable to create default file '" << filename << "'" << std::endl;
         return;
     }
-
     // Write default values to the file
     outFile << "100,0.5,10,20,30,1.0"; // Modify this to include your default values
     outFile.close();
-
     std::cout << "Default file '" << filename << "' created successfully." << std::endl;
 }
 

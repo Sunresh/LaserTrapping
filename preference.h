@@ -23,7 +23,6 @@ extern cv::Point POINT2;
 extern int radius;
 extern int XaxisX1;
 extern int YaxisY1;
-extern double VOLTAGE;
 extern double BRIGHTNESS, LOWER_SD_POINT;
 extern int TTIME;
 extern cv::Scalar red;
@@ -91,6 +90,7 @@ public:
 	void Pref::createDefaultFile(const std::string& filename);
 	void Pref::setHeight(int newHeight);
 	int getHeight() const;
+	double Pref::maxVolt();
 private:
 	double height,threshold, time;
 
