@@ -9,8 +9,8 @@ Deposition::Deposition() :
 	fwidth = GetSystemMetrics(SM_CXSCREEN)-10;
 	fheight = GetSystemMetrics(SM_CYSCREEN)-90;
 	
-	mydaq.start(nullptr, "dev0", 0);
-	mydaq.start(nullptr, "dev1", 0);
+	mydaq.start(nullptr, "Dev2/ao0", 0);
+	mydaq.start(nullptr, "Dev2/ao1", 0);
 	
 	cam.open(CAMERA);
 
@@ -83,7 +83,7 @@ void Deposition::getelapsedTime(std::chrono::time_point<std::chrono::high_resolu
 }
 std::string Deposition::double2string(const double& value, const std::string& stri) {
 	std::stringstream sis;
-	sis << stri << std::fixed << std::setprecision(1) << value;
+	sis << stri << std::fixed << std::setprecision(3) << value;
 	std::string thrr = sis.str();
 	return thrr;
 }
@@ -194,7 +194,7 @@ void Deposition::application() {
 				}
 				DAQmxWriteAnalogF64(task2, 1, true, 10.0, DAQmx_Val_GroupByChannel, &electrophoretic, nullptr, nullptr);
 				DAQmxWriteAnalogF64(task1, 1, true, 10.0, DAQmx_Val_GroupByChannel, &voltage, nullptr, nullptr);
-
+				setcurrentHeight(voltage);
 				grphValues.push_back(voltage);
 				grphVa.push_back(voltage);
 				pr.simpleCSVsave(LAST_VOLT_FILE, voltage);
@@ -206,6 +206,7 @@ void Deposition::application() {
 				isComplete = true;
 				voltage -= pr.maxVolt() / (numSteps * 0.1);
 				electrophoretic = 0.0;
+				mydaq.start(nullptr, "Dev2/ao0", 0);
 				if (voltage < 0) {
 					cam.release();
 					cv::destroyAllWindows();
@@ -294,17 +295,17 @@ void Deposition::laserspot(cv::Mat& frame, double elapsedTime, cv::Mat& fullScre
 	Deposition::drawRectangle(fullScreenImage, 0, pr.maxVolt() *100 - (barHe), 5, pr.maxVolt() *100, green, -1);
 
 	int y = 30;
-	drawText(information, double2string(elapsedTime, "T: "), 0, y, 0.5, red, 1);
+	drawText(information, double2string(elapsedTime, "T: ")+ double2string(etime, "   THmax: "), 0, y, 0.5, red, 1);
 	y += 30;
-	drawText(information, double2string(etime, "THmax: "), 0, y, 0.5, red, 1);
+	drawText(information, double2string(pr.maxVolt() * 6, "Expected Height: ")+ double2string(cHT, "  Real Height: "), 0, y, 0.5, red, 1);
 	y += 30;
-	drawText(information, double2string(pr.maxVolt() * 6, "Height: "), 0, y, 0.5, red, 1);
+	drawText(information, double2string(BRIGHTNESS, "Upper th point: ")+ double2string(LOWER_SD_POINT, "  lower th point: "), 0, y, 0.5, red, 1);
 	y += 30;
-	drawText(information, double2string(cHT, "cHeight: "), 0, y, 0.5, red, 1);
+	drawText(information, double2string(getcurrentBrightness(), "Real Brightness: "), 0, y, 0.5, red, 1);
 	y += 30;
-	drawText(information, double2string(BRIGHTNESS, "C_th: "), 0, y, 0.5, red, 1);
+	drawText(information, double2string(TTIME, "Expected Time: "), 0, y, 0.5, red, 1);
 	y += 30;
-	drawText(information, double2string(getcurrentBrightness(), "Brightness: "), 0, y, 0.5, red, 1);
+	drawText(information, double2string(radius, "Spot size: "), 0, y, 0.5, red, 1);
 	y += 30;
 	drawText(information, double2string(feedbackSD(), "SD: "), 0, y, 0.5, red, 1);
 	y += 30;
