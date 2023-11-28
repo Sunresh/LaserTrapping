@@ -8,10 +8,6 @@
 
 using namespace std;
 cv::Point POINT1, POINT2;
-int radius;
-int XaxisX1, YaxisY1;
-double BRIGHTNESS, LOWER_SD_POINT;
-int TTIME;
 cv::Scalar red, white, black,green;
 std::string commonPath;
 char* dev0;
@@ -19,6 +15,7 @@ char* dev1;
 int CAMERA;
 std::string DesktopFolder;
 std::string LAST_VOLT_FILE;
+UserPreferences prefs;
 
 Pref::Pref() : height(),threshold(),time() {
 	PWSTR path;
@@ -44,25 +41,45 @@ Pref::Pref() : height(),threshold(),time() {
 	else {
 		loadCSV(PREF_FILE, prefs);
 	}
-	BRIGHTNESS = prefs.threshold;
-	LOWER_SD_POINT = prefs.sdlowerpoint;
-	TTIME = prefs.time;
-	radius = prefs.radius;
-	XaxisX1 = prefs.left;
-	YaxisY1 = prefs.top;
-	POINT1 = cv::Point(XaxisX1, YaxisY1);
-	POINT2 = cv::Point(XaxisX1 + radius, YaxisY1 + radius);
+	POINT1 = cv::Point(getLeft(), getTop());
+	POINT2 = cv::Point(getLeft() + getRadiusBox(), getTop() + getRadiusBox());
 	CAMERA = prefs.camera;
 }
-
-double Pref :: maxVolt() {
-	UserPreferences prefs;
+void Pref::LoadPreferences() {
 	if (!loadCSV(PREF_FILE, prefs)) {
 		std::cerr << "No preferences found or error reading preferences. Creating with default values." << std::endl;
 	}
 	else {
 		loadCSV(PREF_FILE, prefs);
 	}
+}
+
+double Pref::getUpperTh() {
+	LoadPreferences();
+	return prefs.threshold;
+}
+double Pref::getLowerTh() {
+	LoadPreferences();
+	return prefs.sdlowerpoint;
+}
+double Pref::getDurationTime() {
+	LoadPreferences();
+	return prefs.time;
+}
+double Pref::getRadiusBox() {
+	LoadPreferences();
+	return prefs.height / 6;
+}
+double Pref::getTop() {
+	LoadPreferences();
+	return prefs.top;
+}
+double Pref::getLeft() {
+	LoadPreferences();
+	return prefs.left;
+}
+double Pref::maxVolt() {
+	LoadPreferences();
 	return prefs.height / 6;
 }
 

@@ -35,7 +35,6 @@ public:
 	void Deposition::DrawDashedLine(cv::Mat& img, cv::Point pt1, cv::Point pt2, cv::Scalar color, int thickness, std::string style, int gap);
 	static void Deposition::onMouse(int event, int x, int y, int flags, void* userdata);
 	void Deposition::laserspot(cv::Mat& dframe, double elapsedTime, cv::Mat& fullscreenimage);
-	int numSteps = TTIME * 100;
 	double etime = 0;
 	double averagediff, cBR, cHT;
 	bool isComplete = false;
@@ -66,6 +65,7 @@ public:
 	double Deposition::getcurrentHeight();
 	bool isCameraOnly;
 	double Deposition::feedbackSD();
+	int Deposition::numSteps();
 
 };
 

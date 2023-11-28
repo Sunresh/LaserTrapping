@@ -20,15 +20,7 @@ using namespace std;
 
 extern cv::Point POINT1;
 extern cv::Point POINT2;
-extern int radius;
-extern int XaxisX1;
-extern int YaxisY1;
-extern double BRIGHTNESS, LOWER_SD_POINT;
-extern int TTIME;
-extern cv::Scalar red;
-extern cv::Scalar white;
-extern cv::Scalar black;
-extern cv::Scalar green;
+extern cv::Scalar red, white, black, green;
 extern std::string commonPath;
 extern char* dev0;
 extern char* dev1;
@@ -91,6 +83,14 @@ public:
 	void Pref::setHeight(int newHeight);
 	int getHeight() const;
 	double Pref::maxVolt();
+	void Pref::LoadPreferences();
+	double Pref::getUpperTh();
+	double Pref::getLowerTh();
+	double Pref::getTop();
+	double Pref::getLeft();
+	double Pref::getDurationTime();
+	double Pref::getRadiusBox();
+
 private:
 	double height,threshold, time;
 

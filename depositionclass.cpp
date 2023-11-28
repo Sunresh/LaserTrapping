@@ -13,8 +13,6 @@ Deposition::Deposition() :
 	mydaq.start(nullptr, "Dev2/ao1", 0);
 	
 	cam.open(CAMERA);
-
-	int numSteps = TTIME * 100;
 	double etime = 0;
 	bool isComplete = false;
 	double voltage = 0.0;
@@ -24,7 +22,9 @@ Deposition::Deposition() :
 	std::deque<double> pixData, grphVa, lla;
 	int timedelay = 0;
 }
-
+int Deposition::numSteps() {
+	return  pr.getDurationTime() * 100;
+}
 void Deposition::setfwidth(int windowwidth) {
 	if (fwidth > 0)
 		fwidth = windowwidth;
@@ -121,7 +121,7 @@ void Deposition::application() {
 			}
 			getelapsedTime(startTime);
 			laserspot(dframe, elapsedTime, fullScreenImage);
-			SchmittTrigger schmittTrigger(BRIGHTNESS, LOWER_SD_POINT); // Set upper and lower thresholds
+			SchmittTrigger schmittTrigger(pr.getUpperTh(), pr.getLowerTh()); // Set upper and lower thresholds
 			bool output = schmittTrigger.processInput(feedbackSD());
 			if (!isCameraOnly) {
 				contrastData.push_back(getcurrentBrightness());
@@ -133,13 +133,13 @@ void Deposition::application() {
 						timedelay = 0.0;
 					}
 					if ( isWithoutredeposition && !isRedeposition) {
-						voltage += pr.maxVolt() / (numSteps);
+						voltage += pr.maxVolt() / (numSteps());
 						electrophoretic = 2.0;
 					}
 					if (voltage >= pr.maxVolt() && !isComplete) {
 						etime = elapsedTime;
 						isComplete = true;
-						voltage -= pr.maxVolt() / numSteps;
+						voltage -= pr.maxVolt() / numSteps();
 						electrophoretic = 0.0;
 						writeContrastToCSV(commonPath + exportfile + "top.csv", contrastData, grphValues, feed_deque, "No of frame", "Contrast", "PZT volt");
 					}
@@ -150,16 +150,16 @@ void Deposition::application() {
 						timedelay = 0.0;
 					}
 					if (output && isWithoutredeposition && !isRedeposition) {
-						voltage += pr.maxVolt() / (numSteps);
+						voltage += pr.maxVolt() / (numSteps());
 						electrophoretic = 2.0;
 					}
 					if (output && isRedeposition) {
-						voltage += pr.maxVolt() / (numSteps + timedelay);
+						voltage += pr.maxVolt() / (numSteps() + timedelay);
 						electrophoretic = 2.0;
 					}
 					if (!output) {
 						timedelay += 1;
-						voltage -= pr.maxVolt() / (numSteps * 0.25);
+						voltage -= pr.maxVolt() / (numSteps() * 0.25);
 						electrophoretic = 2.0;
 						isRedeposition = true;
 						isWithoutredeposition = false;
@@ -167,13 +167,13 @@ void Deposition::application() {
 					if (voltage >= pr.maxVolt() && !isComplete) {
 						etime = elapsedTime;
 						isComplete = true;
-						voltage -= pr.maxVolt() / numSteps;
+						voltage -= pr.maxVolt() / numSteps();
 						electrophoretic = 0.0;
 						writeContrastToCSV(commonPath + exportfile + "top.csv", contrastData, grphValues, feed_deque, "No of frame", "Contrast", "PZT volt");
 					}
 				}
 				if (isComplete) {
-					voltage -= pr.maxVolt() / (numSteps * 0.2);
+					voltage -= pr.maxVolt() / (numSteps() * 0.2);
 					electrophoretic = 0.0;
 					if (voltage < 0) {
 						voltage = 0;
@@ -184,8 +184,8 @@ void Deposition::application() {
 							"THmax," + double2string(etime, "") + "\n" +
 							"file," + exportfile + "\n" +
 							"Height," + double2string(pr.maxVolt() * 6, "") + "\n" +
-							"C_th," + double2string(BRIGHTNESS, "") + "\n" +
-							"V(micro-m/s)," + double2string(pr.maxVolt() * 6 / (numSteps + timedelay), "");
+							"C_th," + double2string(pr.getUpperTh(), "") + "\n" +
+							"V(micro-m/s)," + double2string(pr.maxVolt() * 6 / (numSteps() + timedelay), "");
 						wToCSV(commonPath + exportfile + "debug.csv", mulpani);
 
 						cv::destroyWindow(exportfile);
@@ -204,7 +204,7 @@ void Deposition::application() {
 			char key = cv::waitKey(1);
 			if (key == 'q' || key == ' ') {
 				isComplete = true;
-				voltage -= pr.maxVolt() / (numSteps * 0.1);
+				voltage -= pr.maxVolt() / (numSteps() * 0.1);
 				electrophoretic = 0.0;
 				mydaq.start(nullptr, "Dev2/ao0", 0);
 				if (voltage < 0) {
@@ -241,24 +241,24 @@ void Deposition::onMouse(int event, int x, int y, int flags, void* userdata) {
 
 void Deposition::laserspot(cv::Mat& frame, double elapsedTime, cv::Mat& fullScreenImage) {
 	int XaxisX2,YaxisY2;
-	if ((XaxisX1 - 30) < 0) {
-		XaxisX2 = XaxisX1;
+	if ((pr.getLeft() - 30) < 0) {
+		XaxisX2 = pr.getLeft();
 	}
 	else {
-		XaxisX2 = XaxisX1 - 30;
+		XaxisX2 = pr.getLeft() - 30;
 	}
-	if ((YaxisY1 - 30) < 0) {
-		YaxisY2 = YaxisY1;
+	if ((pr.getTop() - 30) < 0) {
+		YaxisY2 = pr.getTop();
 	}
 	else {
-		YaxisY2 = YaxisY1 - 30;
+		YaxisY2 = pr.getTop() - 30;
 	}
 	cv::flip(frame, dframe, 1);//flip
 	cv::rectangle(dframe, POINT1, POINT2, red, 1);//red
-	cv::rectangle(dframe, cv::Point(XaxisX2, YaxisY2), cv::Point(XaxisX1 + radius + 30, YaxisY1 + radius + 30), green, 1);
+	cv::rectangle(dframe, cv::Point(XaxisX2, YaxisY2), cv::Point(pr.getLeft() + pr.getRadiusBox() + 30, pr.getTop() + pr.getRadiusBox() + 30), green, 1);
 	//green
-	cv::Rect roiRect(XaxisX1 + 1, YaxisY1 + 1, radius - 1, radius - 1);//small
-	cv::Rect rRect(XaxisX2, YaxisY2, radius + 63, radius + 63);//big
+	cv::Rect roiRect(pr.getLeft() + 1, pr.getTop() + 1, pr.getRadiusBox() - 1, pr.getRadiusBox() - 1);//small
+	cv::Rect rRect(XaxisX2, YaxisY2, pr.getRadiusBox() + 63, pr.getRadiusBox() + 63);//big
 
 	grayColorRect = dframe(roiRect);//crop
 	gRect = dframe(rRect);//crop
@@ -299,17 +299,17 @@ void Deposition::laserspot(cv::Mat& frame, double elapsedTime, cv::Mat& fullScre
 	y += 30;
 	drawText(information, double2string(pr.maxVolt() * 6, "Expected Height: ")+ double2string(cHT, "  Real Height: "), 0, y, 0.5, red, 1);
 	y += 30;
-	drawText(information, double2string(BRIGHTNESS, "Upper th point: ")+ double2string(LOWER_SD_POINT, "  lower th point: "), 0, y, 0.5, red, 1);
+	drawText(information, double2string(pr.getUpperTh(), "Upper th point: ")+ double2string(pr.getLowerTh(), "  lower th point: "), 0, y, 0.5, red, 1);
 	y += 30;
 	drawText(information, double2string(getcurrentBrightness(), "Real Brightness: "), 0, y, 0.5, red, 1);
 	y += 30;
-	drawText(information, double2string(TTIME, "Expected Time: "), 0, y, 0.5, red, 1);
+	drawText(information, double2string(pr.getDurationTime(), "Expected Time: "), 0, y, 0.5, red, 1);
 	y += 30;
-	drawText(information, double2string(radius, "Spot size: "), 0, y, 0.5, red, 1);
+	drawText(information, double2string(pr.getRadiusBox(), "Spot size: "), 0, y, 0.5, red, 1);
 	y += 30;
 	drawText(information, double2string(feedbackSD(), "SD: "), 0, y, 0.5, red, 1);
 	y += 30;
-	drawText(information, double2string(pr.maxVolt() * 6 / (numSteps + timedelay), "V(micro-m/s): "), 0, y, 0.5, red, 1);
+	drawText(information, double2string(pr.maxVolt() * 6 / (numSteps() + timedelay), "V(micro-m/s): "), 0, y, 0.5, red, 1);
 	y += 30;
 	drawText(information, "file:" + exportfile, 0, y, 0.5, red, 1);
 	y += 30;
@@ -376,7 +376,7 @@ void Deposition::drawYAxisValues(cv::Mat& graphArea,const cv::Scalar& color, con
 }
 
 void Deposition::drawXAxis(cv::Mat& graphArea, const cv::Scalar& color) {
-	double thline = ((80*(1-BRIGHTNESS))+15)/100;
+	double thline = ((80*(1- pr.getUpperTh()))+15)/100;
 	DrawDashedLine(graphArea, cv::Point(30, graphArea.rows * 0.15), cv::Point(graphArea.cols, graphArea.rows * 0.15), red, 1, "dotted", 10);
 	line(graphArea, cv::Point(30, graphArea.rows*0.15), cv::Point(30, graphArea.rows*0.95), color, 1);
 	cv::line(graphArea, cv::Point(30, graphArea.rows*0.95), cv::Point(graphArea.cols, graphArea.rows*0.95), color, 1, cv::LINE_8);
