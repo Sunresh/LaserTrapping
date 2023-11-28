@@ -12,7 +12,7 @@ Deposition::Deposition() :
 	mydaq.start(nullptr, "Dev2/ao0", 0);
 	mydaq.start(nullptr, "Dev2/ao1", 0);
 	
-	cam.open(CAMERA);
+	cam.open(pr.getCameraId());
 	double etime = 0;
 	bool isComplete = false;
 	double voltage = 0.0;
@@ -123,6 +123,8 @@ void Deposition::application() {
 			laserspot(dframe, elapsedTime, fullScreenImage);
 			SchmittTrigger schmittTrigger(pr.getUpperTh(), pr.getLowerTh()); // Set upper and lower thresholds
 			bool output = schmittTrigger.processInput(feedbackSD());
+			Memory mm;
+			
 			if (!isCameraOnly) {
 				contrastData.push_back(getcurrentBrightness());
 				pixData.push_back(getcurrentBrightness());
@@ -198,6 +200,7 @@ void Deposition::application() {
 				grphValues.push_back(voltage);
 				grphVa.push_back(voltage);
 				pr.simpleCSVsave(LAST_VOLT_FILE, voltage);
+				mm.storeValue(voltage);
 			}
 			cv::imshow(exportfile, fullScreenImage);
 			cv::moveWindow(exportfile, 0, 0);

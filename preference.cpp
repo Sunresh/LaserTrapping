@@ -12,7 +12,6 @@ cv::Scalar red, white, black,green;
 std::string commonPath;
 char* dev0;
 char* dev1;
-int CAMERA;
 std::string DesktopFolder;
 std::string LAST_VOLT_FILE;
 UserPreferences prefs;
@@ -34,16 +33,9 @@ Pref::Pref() : height(),threshold(),time() {
 	dev0 = "Dev2/ao0";
 	dev1 = "Dev2/ao1";
 	LAST_VOLT_FILE = "lastvolt.csv";
-	UserPreferences prefs;
-	if (!loadCSV(PREF_FILE, prefs)) {
-		std::cerr << "No preferences found or error reading preferences. Creating with default values." << std::endl;
-	}
-	else {
-		loadCSV(PREF_FILE, prefs);
-	}
+	LoadPreferences();
 	POINT1 = cv::Point(getLeft(), getTop());
 	POINT2 = cv::Point(getLeft() + getRadiusBox(), getTop() + getRadiusBox());
-	CAMERA = prefs.camera;
 }
 void Pref::LoadPreferences() {
 	if (!loadCSV(PREF_FILE, prefs)) {
@@ -54,6 +46,10 @@ void Pref::LoadPreferences() {
 	}
 }
 
+double Pref::getCameraId() {
+	LoadPreferences();
+	return prefs.camera;
+}
 double Pref::getUpperTh() {
 	LoadPreferences();
 	return prefs.threshold;

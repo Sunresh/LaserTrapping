@@ -24,20 +24,16 @@ extern cv::Scalar red, white, black, green;
 extern std::string commonPath;
 extern char* dev0;
 extern char* dev1;
-extern int CAMERA;
 
 struct UserPreferences {
-	std::string name;
-	double left, top, threshold, sdlowerpoint, height, radius, time;
-	std::string favoriteColor;
-	double camera;
+	std::string name, favoriteColor;
+	double left, top, threshold, sdlowerpoint, height, radius, time, camera;
 };
 class SchmittTrigger {
 public:
 	SchmittTrigger(double upperThreshold, double lowerThreshold)
 		: upperThreshold_(upperThreshold), lowerThreshold_(lowerThreshold), output_(false) {
 	}
-
 	bool processInput(double inputValue) {
 		if (inputValue >= upperThreshold_) {
 			output_ = true;
@@ -47,7 +43,6 @@ public:
 		}
 		return output_;
 	}
-
 	bool getOutput() const {
 		return output_;
 	}
@@ -56,6 +51,29 @@ private:
 	double upperThreshold_;
 	double lowerThreshold_;
 	bool output_;
+};
+
+class Memory {
+public:
+	void storeValue(double val) {
+		// Store the value in the file
+		std::ofstream file(commonPath+"stored_value.txt");
+		if (file.is_open()) {
+			file << val;
+			file.close();
+		}
+	}
+
+	double getValue() const {
+		double storedValue = 0;
+		// Retrieve the stored value from the file
+		std::ifstream file(commonPath+"stored_value.txt");
+		if (file.is_open()) {
+			file >> storedValue;
+			file.close();
+		}
+		return storedValue;
+	}
 };
 
 
@@ -89,7 +107,8 @@ public:
 	double Pref::getTop();
 	double Pref::getLeft();
 	double Pref::getDurationTime();
-	double Pref::getRadiusBox();
+	double Pref::getRadiusBox(); 
+	double Pref::getCameraId();
 
 private:
 	double height,threshold, time;
