@@ -107,7 +107,7 @@ public:
 	double Pref::getTop();
 	double Pref::getLeft();
 	double Pref::getDurationTime();
-	double Pref::getRadiusBox(); 
+	double Pref::getRadiusBox();
 	double Pref::getCameraId();
 
 private:

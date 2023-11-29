@@ -64,7 +64,7 @@ double Pref::getDurationTime() {
 }
 double Pref::getRadiusBox() {
 	LoadPreferences();
-	return prefs.height / 6;
+	return prefs.radius;
 }
 double Pref::getTop() {
 	LoadPreferences();

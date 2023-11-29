@@ -20,6 +20,7 @@ private:
 	int fwidth;
 	int fheight;
 	bool isFeedbackstart;
+	
 public:
 	Pref pr;
 	Deposition();
@@ -41,7 +42,6 @@ public:
 	bool isRedeposition = false;
 	bool isWithoutredeposition = true;
 	double voltage = 0.0;
-	double electrophoretic = 0.0;
 	cv::Mat frame, dframe, grayColorRect, gRect;
 	std::vector<double> contrastData, grphValues;
 	std::deque<double> pixData, grphVa, lla,feed_deque;
@@ -66,6 +66,13 @@ public:
 	bool isCameraOnly;
 	double Deposition::feedbackSD();
 	int Deposition::numSteps();
+	double epv = 0.0;
+	void setEV(double ephv = 2.2) {
+		epv = ephv;
+	}
+	double getEV() {
+		return epv;
+	}
 
 };
 

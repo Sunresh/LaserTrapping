@@ -16,7 +16,6 @@ Deposition::Deposition() :
 	double etime = 0;
 	bool isComplete = false;
 	double voltage = 0.0;
-	double electrophoretic = 0.0;
 	cv::Mat frame, dframe, grayColorRect, gRect;
 	std::vector<double> contrastData, grphValues;
 	std::deque<double> pixData, grphVa, lla;
@@ -136,13 +135,13 @@ void Deposition::application() {
 					}
 					if ( isWithoutredeposition && !isRedeposition) {
 						voltage += pr.maxVolt() / (numSteps());
-						electrophoretic = 2.0;
+						setEV();
 					}
 					if (voltage >= pr.maxVolt() && !isComplete) {
 						etime = elapsedTime;
 						isComplete = true;
 						voltage -= pr.maxVolt() / numSteps();
-						electrophoretic = 0.0;
+						setEV(0);
 						writeContrastToCSV(commonPath + exportfile + "top.csv", contrastData, grphValues, feed_deque, "No of frame", "Contrast", "PZT volt");
 					}
 				}
@@ -153,16 +152,16 @@ void Deposition::application() {
 					}
 					if (output && isWithoutredeposition && !isRedeposition) {
 						voltage += pr.maxVolt() / (numSteps());
-						electrophoretic = 2.0;
+						setEV();
 					}
 					if (output && isRedeposition) {
 						voltage += pr.maxVolt() / (numSteps() + timedelay);
-						electrophoretic = 2.0;
+						setEV();
 					}
 					if (!output) {
 						timedelay += 1;
 						voltage -= pr.maxVolt() / (numSteps() * 0.25);
-						electrophoretic = 2.0;
+						setEV();
 						isRedeposition = true;
 						isWithoutredeposition = false;
 					}
@@ -170,15 +169,16 @@ void Deposition::application() {
 						etime = elapsedTime;
 						isComplete = true;
 						voltage -= pr.maxVolt() / numSteps();
-						electrophoretic = 0.0;
+						setEV(0);
 						writeContrastToCSV(commonPath + exportfile + "top.csv", contrastData, grphValues, feed_deque, "No of frame", "Contrast", "PZT volt");
 					}
 				}
 				if (isComplete) {
 					voltage -= pr.maxVolt() / (numSteps() * 0.2);
-					electrophoretic = 0.0;
+					setEV(0);
 					if (voltage < 0) {
 						voltage = 0;
+						setEV(0);
 						cv::imwrite(commonPath + exportfile + ".jpg", fullScreenImage);
 						writeContrastToCSV(commonPath + exportfile + "sd.csv", contrastData, grphValues, feed_deque, "No of frame", "Contrast", "PZT volt");
 						std::string mulpani =
@@ -194,7 +194,8 @@ void Deposition::application() {
 						break;
 					}
 				}
-				DAQmxWriteAnalogF64(task2, 1, true, 10.0, DAQmx_Val_GroupByChannel, &electrophoretic, nullptr, nullptr);
+				double ev = getEV();
+				DAQmxWriteAnalogF64(task2, 1, true, 10.0, DAQmx_Val_GroupByChannel, &ev, nullptr, nullptr);
 				DAQmxWriteAnalogF64(task1, 1, true, 10.0, DAQmx_Val_GroupByChannel, &voltage, nullptr, nullptr);
 				setcurrentHeight(voltage);
 				grphValues.push_back(voltage);
@@ -208,7 +209,7 @@ void Deposition::application() {
 			if (key == 'q' || key == ' ') {
 				isComplete = true;
 				voltage -= pr.maxVolt() / (numSteps() * 0.1);
-				electrophoretic = 0.0;
+				setEV(0);
 				mydaq.start(nullptr, "Dev2/ao0", 0);
 				if (voltage < 0) {
 					cam.release();
@@ -304,7 +305,7 @@ void Deposition::laserspot(cv::Mat& frame, double elapsedTime, cv::Mat& fullScre
 	y += 30;
 	drawText(information, double2string(pr.getUpperTh(), "Upper th point: ")+ double2string(pr.getLowerTh(), "  lower th point: "), 0, y, 0.5, red, 1);
 	y += 30;
-	drawText(information, double2string(getcurrentBrightness(), "Real Brightness: "), 0, y, 0.5, red, 1);
+	drawText(information, double2string(getcurrentBrightness(), "Real Brightness: ")+double2string(getEV(), "   EV: "), 0, y, 0.5, red, 1);
 	y += 30;
 	drawText(information, double2string(pr.getDurationTime(), "Expected Time: "), 0, y, 0.5, red, 1);
 	y += 30;
@@ -316,7 +317,7 @@ void Deposition::laserspot(cv::Mat& frame, double elapsedTime, cv::Mat& fullScre
 	y += 30;
 	drawText(information, "file:" + exportfile, 0, y, 0.5, red, 1);
 	y += 30;
-	if (electrophoretic == 0.0) {
+	if (getEV() == 0.0) {
 		drawRectangle(information, 0, y, 25, y+20, red, -1);
 	}
 	else {
