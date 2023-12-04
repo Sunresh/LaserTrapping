@@ -18,5 +18,14 @@ public:
 		DAQmxWriteAnalogF64(task1, 1, true, 10.0, DAQmx_Val_GroupByChannel, &voltage, nullptr, nullptr);
 		DAQmxClearTask(task1);
 	}
+	void digitalOut(bool boolean, const char* digital) {//port0/line0 for shuttur
+		TaskHandle taskHandle = 0;
+		int32 error = 0;
+		DAQmxCreateTask("", &taskHandle);
+		DAQmxCreateDOChan(taskHandle, digital, "", DAQmx_Val_ChanForAllLines);
+		DAQmxWriteDigitalScalarU32(taskHandle, true, 10.0, boolean, nullptr);
+		DAQmxStopTask(taskHandle);
+		DAQmxClearTask(taskHandle);
+	}
 
 };
