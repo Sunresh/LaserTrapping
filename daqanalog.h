@@ -1,9 +1,7 @@
 #include <nidaqmx.h>
 #include <iostream>
 using namespace std;
-class MyDaq 
-
-{
+class MyDaq {
 private:
 	bool isStart;
 	
@@ -18,14 +16,7 @@ public:
 		DAQmxWriteAnalogF64(task1, 1, true, 10.0, DAQmx_Val_GroupByChannel, &voltage, nullptr, nullptr);
 		DAQmxClearTask(task1);
 	}
-	void digitalOut(TaskHandle task11 = nullptr, const char* digital= "Dev2/port0/line0", bool boolean) {
-		DAQmxCreateTask("", &task11);
-		DAQmxCreateDOChan(task11, digital, "", DAQmx_Val_ChanForAllLines);
-		DAQmxWriteDigitalScalarU32(task11, true, 10.0, boolean, nullptr);
-		DAQmxStopTask(task11);
-		DAQmxClearTask(task11);
-	}
-	void digitalOuty(TaskHandle& task, const char* digital = "Dev2/port0/line0", bool boolean) {
+	void digitalOut(TaskHandle task= nullptr, const char* digital = "Dev2/port0/line0", bool boolean= true) {
 		int32 error = 0;
 		if (task == nullptr) {
 			DAQmxCreateTask("", &task);
@@ -35,7 +26,6 @@ public:
 		DAQmxWriteDigitalU32(task, 1, 1, 10.0, DAQmx_Val_GroupByChannel, &data, nullptr, nullptr);
 		DAQmxStopTask(task);
 		DAQmxClearTask(task);
-	Error:
 		if (DAQmxFailed(error)) {
 			char errBuff[2048] = { '\0' };
 			DAQmxGetExtendedErrorInfo(errBuff, 2048);
