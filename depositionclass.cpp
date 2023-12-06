@@ -11,7 +11,7 @@ Deposition::Deposition() :
 	
 	mydaq.start(nullptr, "Dev2/ao0", 0);
 	mydaq.start(nullptr, "Dev2/ao1", 0);
-	
+	mydaq.digitalOut(nullptr, "Dev2/port0/line0", 1);
 	cam.open(pr.getCameraId());
 	double etime = 0;
 	bool isComplete = false;
@@ -143,6 +143,7 @@ void Deposition::application() {
 						voltage -= pr.maxVolt() / numSteps();
 						setEV(0);
 						writeContrastToCSV(commonPath + exportfile + "top.csv", contrastData, grphValues, feed_deque, "No of frame", "Contrast", "PZT volt");
+						mydaq.digitalOut(nullptr, "Dev2/port0/line0", 0);
 					}
 				}
 				if (!isComplete && isFeedbackstart) {
@@ -171,6 +172,7 @@ void Deposition::application() {
 						voltage -= pr.maxVolt() / numSteps();
 						setEV(0);
 						writeContrastToCSV(commonPath + exportfile + "top.csv", contrastData, grphValues, feed_deque, "No of frame", "Contrast", "PZT volt");
+						mydaq.digitalOut(nullptr, "Dev2/port0/line0", 0);
 					}
 				}
 				if (isComplete) {

@@ -18,14 +18,33 @@ public:
 		DAQmxWriteAnalogF64(task1, 1, true, 10.0, DAQmx_Val_GroupByChannel, &voltage, nullptr, nullptr);
 		DAQmxClearTask(task1);
 	}
-	void digitalOut(bool boolean, const char* digital) {//port0/line0 for shuttur
-		TaskHandle taskHandle = 0;
+	void digitalOut(TaskHandle task11 = nullptr, const char* digital= "Dev2/port0/line0", bool boolean) {
+		DAQmxCreateTask("", &task11);
+		DAQmxCreateDOChan(task11, digital, "", DAQmx_Val_ChanForAllLines);
+		DAQmxWriteDigitalScalarU32(task11, true, 10.0, boolean, nullptr);
+		DAQmxStopTask(task11);
+		DAQmxClearTask(task11);
+	}
+	void digitalOuty(TaskHandle& task, const char* digital = "Dev2/port0/line0", bool boolean) {
 		int32 error = 0;
-		DAQmxCreateTask("", &taskHandle);
-		DAQmxCreateDOChan(taskHandle, digital, "", DAQmx_Val_ChanForAllLines);
-		DAQmxWriteDigitalScalarU32(taskHandle, true, 10.0, boolean, nullptr);
-		DAQmxStopTask(taskHandle);
-		DAQmxClearTask(taskHandle);
+		if (task == nullptr) {
+			DAQmxCreateTask("", &task);
+		}
+		DAQmxCreateDOChan(task, digital, "", DAQmx_Val_ChanForAllLines);
+		uInt32 data = boolean ? 1 : 0;
+		DAQmxWriteDigitalU32(task, 1, 1, 10.0, DAQmx_Val_GroupByChannel, &data, nullptr, nullptr);
+		DAQmxStopTask(task);
+		DAQmxClearTask(task);
+	Error:
+		if (DAQmxFailed(error)) {
+			char errBuff[2048] = { '\0' };
+			DAQmxGetExtendedErrorInfo(errBuff, 2048);
+			printf("DAQmx Error: %s\n", errBuff);
+			if (task != nullptr) {
+				DAQmxStopTask(task);
+				DAQmxClearTask(task);
+			}
+		}
 	}
 
 };
