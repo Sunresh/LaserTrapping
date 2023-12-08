@@ -7,14 +7,11 @@ find_library(NIDAQmx_LIBRARY NIDAQmx PATHS "C:/Program Files (x86)/National Inst
 include_directories("C:/Program Files (x86)/National Instruments/NI-DAQ/DAQmx ANSI C Dev/include")
 include_directories("C:/opencv/build/include")
 add_executable(${PROJECT_NAME}  
-	"main.cpp"   
-	"preference.cpp" 
+	"main.cpp"
 	"preference.h"    
 	"depositionclass.h" 
-	"depositionclass.cpp"   
-	"MainWindow.cpp" 
+	"MainWindow.h" 
 	"brightnessclass.h" 
-	"brightnessclass.cpp"
 	"daqanalog.h")
 link_directories("C:/opencv/build/x64/v16/lib")
 target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS} ${NIDAQmx_LIBRARY} )

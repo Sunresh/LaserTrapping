@@ -1,5 +1,5 @@
 #include <thread>
-#include "MainWindow.cpp"
+#include "MainWindow.h"
 
 int main() {
 	while(true) {
