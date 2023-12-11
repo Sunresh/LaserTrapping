@@ -46,7 +46,7 @@ public:
 		mydaq.start(nullptr, "Dev2/ao1", 0);
 		mydaq.digitalOut(nullptr, "Dev2/port0/line0", 1);
 		cam.open(pr.getCameraId());
-		//cam.open("C:\\Users\\nares\\Downloads\\firr.mp4");
+		//cam.open("C:\\Users\\nares\\Downloads\\ten.mp4");
 		double etime = 0;
 		bool isComplete = false;
 		double voltage = 0.0;
