@@ -33,7 +33,7 @@ private:
 	std::string exportfile;
 	double elapsedTime;
 	bool isCameraOnly;
-
+	char key;
 public:
 	Pref pr;
 	Deposition::Deposition() :
@@ -44,7 +44,7 @@ public:
 		fheight = GetSystemMetrics(SM_CYSCREEN) - 90;
 		mydaq.start(nullptr, "Dev2/ao0", 0);
 		mydaq.start(nullptr, "Dev2/ao1", 0);
-		mydaq.digitalOut(nullptr, "Dev2/port0/line0", 1);
+		//mydaq.digitalOut(nullptr, "Dev2/port0/line0", 1);
 		cam.open(pr.getCameraId());
 		//cam.open("C:\\Users\\nares\\Downloads\\ten.mp4");
 		double etime = 0;
@@ -237,10 +237,20 @@ public:
 					grphValues.push_back(voltage);
 					grphVa.push_back(voltage);
 					mm.storeValue(voltage);
+					if (key == 'n') {
+						isFeedbackstart = true;
+					}
+					if (key == 'b') {
+						isFeedbackstart = false;
+						isComplete = false;
+						isWithoutredeposition = true;
+						isRedeposition = false;
+					}
+
 				}
 				cv::imshow(exportfile, fullScreenImage);
 				cv::moveWindow(exportfile, 0, 0);
-				char key = cv::waitKey(1);
+				key = cv::waitKey(1);
 				if (key == 'q' || key == ' ') {
 					isComplete = true;
 					voltage -= pr.maxVolt() / (numSteps() * 0.1);
@@ -251,9 +261,6 @@ public:
 						cv::destroyAllWindows();
 						break;
 					}
-				}
-				if (key == 'n') {
-					isFeedbackstart = true;
 				}
 			}
 			DAQmxClearTask(task1);
