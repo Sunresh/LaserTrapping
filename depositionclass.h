@@ -168,7 +168,7 @@ public:
 							timedelay = 0.0;
 						}
 						if (isWithoutredeposition && !isRedeposition) {
-							voltage += pr.maxVolt() / (numSteps());
+							voltage += pr.maxVolt() / (numSteps() + timedelay);
 							setEV();
 						}
 						if (voltage >= pr.maxVolt() && !isComplete) {
@@ -209,6 +209,35 @@ public:
 							mydaq.digitalOut(nullptr, "Dev2/port0/line0", 0);
 						}
 					}
+					if (false) {
+						if (voltage < 0) {//the voltage should not be negative
+							voltage = 0.0;
+							timedelay = 0.0;
+						}
+						if (output && isWithoutredeposition && !isRedeposition) {//before any redeposition and schmitt region
+							voltage += pr.maxVolt() / (numSteps());
+							setEV();
+						}
+						if (output && isRedeposition) {//after redeposition and inside schimitt trigger region
+							voltage += pr.maxVolt() / (numSteps() + timedelay);
+							setEV();
+						}
+						if (!output) {//if out of the schmitt trigger region
+							timedelay += 1;
+							voltage -= pr.maxVolt() / (numSteps() * 0.25);
+							setEV();
+							isRedeposition = true;
+							isWithoutredeposition = false;
+						}
+						if (voltage >= pr.maxVolt() && !isComplete) { //peak point
+							etime = elapsedTime;
+							isComplete = true;
+							voltage -= pr.maxVolt() / numSteps();
+							setEV(0);
+							writeContrastToCSV(pr.getCommonPath() + exportfile + "top.csv", contrastData, grphValues, feed_deque, "No of frame", "Contrast", "PZT volt");
+							mydaq.digitalOut(nullptr, "Dev2/port0/line0", 0);
+						}
+					}
 					if (isComplete) {
 						voltage -= pr.maxVolt() / (numSteps() * 0.2);
 						setEV(0);
@@ -216,7 +245,7 @@ public:
 							voltage = 0;
 							setEV(0);
 							cv::imwrite(pr.getCommonPath() + exportfile + ".jpg", fullScreenImage);
-							writeContrastToCSV(pr.getCommonPath() + exportfile + "sd.csv", contrastData, grphValues, feed_deque, "No of frame", "Contrast", "PZT volt");
+							/*writeContrastToCSV(pr.getCommonPath() + exportfile + "sd.csv", contrastData, grphValues, feed_deque, "No of frame", "Contrast", "PZT volt");
 							std::string mulpani =
 								"Time," + double2string(elapsedTime, " ") + "\n" +
 								"THmax," + double2string(etime, "") + "\n" +
@@ -225,7 +254,7 @@ public:
 								"C_th," + double2string(pr.getUpperTh(), "") + "\n" +
 								"V(micro-m/s)," + double2string(pr.maxVolt() * 6 / (numSteps() + timedelay), "");
 							wToCSV(pr.getCommonPath() + exportfile + "debug.csv", mulpani);
-
+							*/
 							cv::destroyWindow(exportfile);
 							break;
 						}
@@ -256,6 +285,8 @@ public:
 					voltage -= pr.maxVolt() / (numSteps() * 0.1);
 					setEV(0);
 					mydaq.start(nullptr, "Dev2/ao0", 0);
+					mydaq.digitalOut(nullptr, "Dev2/port0/line0", 0);
+					writeContrastToCSV(pr.getCommonPath() + exportfile + "top.csv", contrastData, grphValues, feed_deque, "No of frame", "Contrast", "PZT volt");
 					if (voltage < 0) {
 						cam.release();
 						cv::destroyAllWindows();
@@ -429,23 +460,33 @@ public:
 		//DrawDashedLine(graphArea, cv::Point(30, graphArea.rows * thline), cv::Point(graphArea.cols, graphArea.rows * thline), green, 1, "dotted", 10);
 	}
 
-	void Deposition::writeContrastToCSV(const std::string& filename, const std::vector<double>& contrastData, const std::vector<double>& data3, const std::deque<double>& data4, const std::string& xaxis, const std::string& yaxis, const std::string& name3) {
+	void Deposition::writeContrastToCSV(
+		const std::string& filename, 
+		const std::vector<double>& contrastData, 
+		const std::vector<double>& data3, 
+		const std::deque<double>& data4, 
+		const std::string& xaxis, 
+		const std::string& yaxis, 
+		const std::string& name3) 
+	{
 		std::ofstream outFile(filename);
 		if (!outFile.is_open()) {
 			std::cerr << "Error opening file for writing." << std::endl;
 			return;
 		}
-		outFile << xaxis + "," + yaxis + "," + name3 + "," + "SD" + "," + "min" << std::endl;
+		outFile << xaxis + "," + yaxis + "," + name3 + "," + "SD" /* + "," + "min"*/ << std::endl;
 		size_t maxSize = max(contrastData.size(), data3.size());
 
-		double min_value = DBL_MAX;
-		for (const double& value : data4) {
+		/*double min_value = DBL_MAX;//for minimum of value of sd
+		for (const double& value : data4) {// data 4 ko value madhya
 			if (value != 0.0 && value < min_value) {
 				min_value = value;
 			}
-		}
+		}*/
 		for (size_t i = 0; i < maxSize; ++i) {
+
 			outFile << i + 1 << ",";
+
 			if (i < contrastData.size()) {
 				outFile << contrastData[i];
 			}
@@ -457,10 +498,10 @@ public:
 			if (i < data4.size()) {
 				outFile << data4[i];
 			}
-			outFile << ",";
+			/*outFile << ",";
 			if (i < data4.size()) {
 				outFile << min_value;
-			}
+			}*/
 			outFile << std::endl;
 		}
 		outFile.close();
@@ -506,7 +547,7 @@ public:
 			}
 		}
 	}
-
+///////Standard Deviation of expectedSize
 	double Deposition::stdev(std::deque<double> pixData) {
 		int size = pixData.size();
 		double bright = 0, sum = 0;
@@ -514,7 +555,7 @@ public:
 		int countLastFive = 0;
 		double variance = 0.0;
 		double mean = 0;
-		int expectedsize = 25;
+		int expectedsize = 30;
 		//cout << "\nsize - " << size << endl;
 		if (pixData.empty()) {
 			return 0.0;
@@ -541,7 +582,7 @@ public:
 		return bright;
 	}
 	double epv = 0.0;
-	void setEV(double ephv = 2.2) {
+	void setEV(double ephv = 2.0) {
 		epv = ephv;
 	}
 	double getEV() {
