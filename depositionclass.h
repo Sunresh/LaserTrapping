@@ -19,7 +19,6 @@ private:
 	TaskHandle task2 = nullptr;
 	int fwidth;
 	int fheight;
-	bool isFeedbackstart;
 	double etime = 0;
 	double averagediff, cBR, cHT;
 	bool isComplete = false;
@@ -27,10 +26,8 @@ private:
 	bool isWithoutredeposition = true;
 	double voltage = 0.0;
 	cv::Mat frame, dframe, grayColorRect, gRect;
-	std::vector<double> contrastData, grphValues;
-	std::deque<double> pixData, grphVa, lla, feed_deque;
+	std::vector<double> contrastData, pztValues, sdValues;
 	int timedelay = 0;
-	int cpos = 0;
 	std::string exportfile;
 	double elapsedTime;
 	bool isCameraOnly;
@@ -44,8 +41,7 @@ public:
 		elapsedTime(),
 		averagediff(0), 
 		cBR(0), cHT(0), 
-		isCameraOnly(false), 
-		isFeedbackstart(false)
+		isCameraOnly(true)
 	{
 		mydaq.start(nullptr, "Dev2/ao0", 0);
 		mydaq.start(nullptr, "Dev2/ao1", 0);
@@ -56,8 +52,6 @@ public:
 		bool isComplete = false;
 		double voltage = 0.0;
 		cv::Mat frame, dframe, grayColorRect, gRect;
-		std::vector<double> contrastData, grphValues;
-		std::deque<double> pixData, grphVa, lla;
 		int timedelay = 0;
 	}
 	int Deposition::numSteps() {
@@ -71,12 +65,6 @@ public:
 	}
 	int Deposition::getfwidth() const {
 		return fwidth;
-	}
-	void setCpos() {
-		cpos = +1;
-	}
-	int getCpos() {
-		return cpos;
 	}
 	void Deposition::setfheight(int windowHeight) {
 		if (fheight > 0)
@@ -118,7 +106,7 @@ public:
 		return cHT;
 	}
 	double Deposition::feedbackSD() {
-		return stdev(pixData);
+		return stdev(contrastData);
 	}
 	void Deposition::getelapsedTime(std::chrono::time_point<std::chrono::high_resolution_clock> startTime) {
 		auto currentTime = std::chrono::high_resolution_clock::now();
@@ -137,24 +125,18 @@ public:
 		cv::destroyAllWindows();
 		cout << "End" << endl;
 	}
-	void Deposition::camera() {
-		isCameraOnly = true;
-		application();
-	}
-
 	void Deposition::application() {
 		try {
 			if (!cam.isOpened()) {
 				return;
 			}
-			if (!isCameraOnly) {
-				DAQmxCreateTask("", &task1);
-				DAQmxCreateTask("", &task2);
-				DAQmxCreateAOVoltageChan(task1, pr.deva1(), "ao_channel", 0.0, 5.0, DAQmx_Val_Volts, nullptr);
-				DAQmxCreateAOVoltageChan(task2, pr.deva0(), "ao_channel", 0.0, 5.0, DAQmx_Val_Volts, nullptr);
-				DAQmxCfgSampClkTiming(task1, "", 10.0, DAQmx_Val_Rising, DAQmx_Val_ContSamps, 1);
-				DAQmxCfgSampClkTiming(task2, "", 10.0, DAQmx_Val_Rising, DAQmx_Val_ContSamps, 1);
-			}
+			DAQmxCreateTask("", &task1);
+			DAQmxCreateTask("", &task2);
+			DAQmxCreateAOVoltageChan(task1, pr.deva1(), "ao_channel", 0.0, 5.0, DAQmx_Val_Volts, nullptr);
+			DAQmxCreateAOVoltageChan(task2, pr.deva0(), "ao_channel", 0.0, 5.0, DAQmx_Val_Volts, nullptr);
+			DAQmxCfgSampClkTiming(task1, "", 10.0, DAQmx_Val_Rising, DAQmx_Val_ContSamps, 1);
+			DAQmxCfgSampClkTiming(task2, "", 10.0, DAQmx_Val_Rising, DAQmx_Val_ContSamps, 1);
+
 			auto startTime = std::chrono::high_resolution_clock::now();
 			cv::Mat fullScreenImage(fheight, fwidth, CV_8UC3, pr.uBGR(255, 255, 255));
 			setOutputFileName(pr.getCommonPath());
@@ -170,30 +152,11 @@ public:
 				Memory mm;
 
 				contrastData.push_back(getcurrentBrightness());
-				pixData.push_back(getcurrentBrightness());
-				feed_deque.push_back(feedbackSD());
-				grphValues.push_back(voltage);
-				grphVa.push_back(voltage);
+				sdValues.push_back(feedbackSD());
+				pztValues.push_back(voltage);
+
 				if (!isCameraOnly) {
-					if (!isComplete && !isFeedbackstart) {
-						if (voltage < 0) {
-							voltage = 0.0;
-							timedelay = 0.0;
-						}
-						if (isWithoutredeposition && !isRedeposition) {
-							voltage += pr.maxVolt() / (numSteps() + timedelay);
-							setEV();
-						}
-						if (voltage >= pr.maxVolt() && !isComplete) {
-							etime = elapsedTime;
-							isComplete = true;
-							voltage -= pr.maxVolt() / numSteps();
-							setEV(0);
-							writeContrastToCSV(pr.getCommonPath() + exportfile + "top.csv", contrastData, grphValues, feed_deque, "Contrast", "PZT volt");
-							mydaq.digitalOut(nullptr, "Dev2/port0/line0", 0);
-						}
-					}
-					if (!isComplete && isFeedbackstart) {
+					if (!isComplete) {
 						if (voltage < 0) {
 							voltage = 0.0;
 							timedelay = 0.0;
@@ -218,36 +181,7 @@ public:
 							isComplete = true;
 							voltage -= pr.maxVolt() / numSteps();
 							setEV(0);
-							writeContrastToCSV(pr.getCommonPath() + exportfile + "top.csv", contrastData, grphValues, feed_deque, "Contrast", "PZT volt");
-							mydaq.digitalOut(nullptr, "Dev2/port0/line0", 0);
-						}
-					}
-					if (false) {
-						if (voltage < 0) {//the voltage should not be negative
-							voltage = 0.0;
-							timedelay = 0.0;
-						}
-						if (output && isWithoutredeposition && !isRedeposition) {//before any redeposition and schmitt region
-							voltage += pr.maxVolt() / (numSteps());
-							setEV();
-						}
-						if (output && isRedeposition) {//after redeposition and inside schimitt trigger region
-							voltage += pr.maxVolt() / (numSteps() + timedelay);
-							setEV();
-						}
-						if (!output) {//if out of the schmitt trigger region
-							timedelay += 1;
-							voltage -= pr.maxVolt() / (numSteps() * 0.25);
-							setEV();
-							isRedeposition = true;
-							isWithoutredeposition = false;
-						}
-						if (voltage >= pr.maxVolt() && !isComplete) { //peak point
-							etime = elapsedTime;
-							isComplete = true;
-							voltage -= pr.maxVolt() / numSteps();
-							setEV(0);
-							writeContrastToCSV(pr.getCommonPath() + exportfile + "top.csv", contrastData, grphValues, feed_deque, "Contrast", "PZT volt");
+							writeContrastToCSV(pr.getCommonPath() + exportfile + "top.csv", contrastData, pztValues, sdValues, "Contrast", "PZT volt");
 							mydaq.digitalOut(nullptr, "Dev2/port0/line0", 0);
 						}
 					}
@@ -267,15 +201,6 @@ public:
 					DAQmxWriteAnalogF64(task1, 1, true, 10.0, DAQmx_Val_GroupByChannel, &voltage, nullptr, nullptr);
 					setcurrentHeight(voltage);
 					mm.storeValue(voltage);
-					if (key == 'n') {
-						isFeedbackstart = true;
-					}
-					if (key == 'b') {
-						isFeedbackstart = false;
-						isComplete = false;
-						isWithoutredeposition = true;
-						isRedeposition = false;
-					}
 					if (key == '9') {
 						isCameraOnly = true;
 					}
@@ -293,7 +218,7 @@ public:
 					setEV(0);
 					mydaq.start(nullptr, "Dev2/ao0", 0);
 					mydaq.digitalOut(nullptr, "Dev2/port0/line0", 0);
-					writeContrastToCSV(pr.getCommonPath() + exportfile + "top.csv", contrastData, grphValues, feed_deque,"Contrast", "PZT volt");
+					writeContrastToCSV(pr.getCommonPath() + exportfile + "top.csv", contrastData, pztValues, sdValues,"Contrast", "PZT volt");
 					if (voltage < 0) {
 						cam.release();
 						cv::destroyAllWindows();
@@ -366,9 +291,9 @@ public:
 		cv::Mat information = fullScreenImage(infoarea);
 		information = cv::Mat::ones(information.size(), information.type()) * 100;
 
-		allgraph(graapp, pixData, 1, "Brightness");
-		allgraph(graappix, feed_deque, 0.3, "SD");
-		allgraph(heightgraph, grphVa, pr.maxVolt(), "PZT");
+		allgraph(graapp, contrastData, 1, "Brightness");
+		allgraph(graappix, sdValues, 0.3, "SD");
+		allgraph(heightgraph, pztValues, pr.maxVolt(), "PZT");
 
 		int barHeight = static_cast<int>((feedbackSD()) * 100);
 		int hightofbrightness = 100;
@@ -417,15 +342,16 @@ public:
 		frame.copyTo(screenImage(cv::Rect(x, y, frame.cols, frame.rows)));
 	}
 
-	void Deposition::allgraph(cv::Mat& frame, std::deque<double>& graphValues, double upperLimit, const std::string& yxix) {
+	void Deposition::allgraph(cv::Mat& frame, std::vector<double>& graphValues, double upperLimit, const std::string& yxix) {
 		const int startPointX = 30;
 		if (graphValues.empty()) {
 			return;
 		}
 		int height = frame.rows;
 		int width = frame.cols;
-		if (graphValues.size() >= width - startPointX) {
-			graphValues.pop_front();
+		if (graphValues.size() >= static_cast<size_t>(width - startPointX)) {
+			// Erase elements from the beginning to keep the size within the limit
+			graphValues.erase(graphValues.begin(), graphValues.begin() + (graphValues.size() - (width - startPointX)));
 		}
 		cv::Point startPoint(startPointX, height * 0.5);
 		frame = cv::Scalar(255, 255, 255);
@@ -436,8 +362,6 @@ public:
 			line(frame, startPoint, endPoint, cv::Scalar(0, 0, 0), 1);
 			startPoint = endPoint;
 		}
-		//double newYValue = 50;
-		//graphValues.push_back(newYValue);
 		drawYAxisValues(frame, pr.uBGR(0, 0, 0), upperLimit, yxix);
 		drawXAxis(frame, pr.uBGR(0, 0, 0));
 	}
@@ -470,7 +394,7 @@ public:
 		const std::string& filename, 
 		const std::vector<double>& contrastData, 
 		const std::vector<double>& data3, 
-		const std::deque<double>& data4, 
+		const std::vector<double>& data4, 
 		const std::string& yaxis, 
 		const std::string& name3) 
 	{
@@ -479,17 +403,13 @@ public:
 			std::cerr << "Error opening file for writing." << std::endl;
 			return;
 		}
-		outFile << yaxis + "," + name3 + "," + "SD" /* + "," + "min"*/ << std::endl;
+		outFile <<"SN,"+ yaxis + "," + name3 + ",SD" /* + "," + "min"*/ << std::endl;
 		size_t maxSize = max(contrastData.size(), data3.size());
 
-		/*double min_value = DBL_MAX;//for minimum of value of sd
-		for (const double& value : data4) {// data 4 ko value madhya
-			if (value != 0.0 && value < min_value) {
-				min_value = value;
-			}
-		}*/
+		size_t outputIndex = 1;
 		for (size_t i = 0; i < maxSize; ++i) {
 			if (data3[i] != 0.0) {
+				outFile << outputIndex << ",";
 				if (i < contrastData.size()) {
 					outFile << contrastData[i];
 				}
@@ -501,11 +421,8 @@ public:
 				if (i < data4.size()) {
 					outFile << data4[i];
 				}
-				/*outFile << ",";
-				if (i < data4.size()) {
-					outFile << min_value;
-				}*/
 				outFile << std::endl;
+				++outputIndex;
 			}
 		}
 		outFile.close();
@@ -551,8 +468,8 @@ public:
 			}
 		}
 	}
-///////Standard Deviation of expectedSize
-	double Deposition::stdev(std::deque<double> pixData) {
+
+	double Deposition::stdev(std::vector<double> pixData) {
 		int size = pixData.size();
 		double bright = 0, sum = 0;
 		double vari = 0;
@@ -560,31 +477,26 @@ public:
 		double variance = 0.0;
 		double mean = 0;
 		int expectedsize = 30;
-		//cout << "\nsize - " << size << endl;
 		if (pixData.empty()) {
 			return 0.0;
 		}
 		for (int i = size - expectedsize; i < size; ++i) {
 			if (i >= 0) {
-				//cout << "pixData - " << i << " : " << pixData[i] << endl;
 				sum += pixData[i];
 				++countLastFive;
 			}
 		}
 		mean = (countLastFive > 0) ? (sum / countLastFive) : 0.0;
-		//cout << "mean - " << mean << endl;
 		for (int i = size - expectedsize; i < size; ++i) {
 			if (i >= 0) {
-				//cout << "(" << pixData[i] << "-" << mean << ") : " << pixData[i] - mean << endl;
 				variance += std::pow(pixData[i] - mean, 2);
 			}
 		}
 		variance /= (countLastFive);
-		//cout << "variance - " << variance << endl;
 		bright = std::sqrt(variance);
-		//cout << "bright - " << bright << endl;
 		return bright;
 	}
+
 	double epv = 0.0;
 	void setEV(double ephv = 2.0) {
 		epv = ephv;
@@ -592,6 +504,5 @@ public:
 	double getEV() {
 		return epv;
 	}
-
 };
 

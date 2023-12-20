@@ -30,16 +30,8 @@ public:
 			}
 			if (key == 'c') {
 				Deposition diay;
-				//diay.setfwidth(900);
-				//diay.setfheight(500);
-				std::thread ddaia(&Deposition::camera, &diay);
+				std::thread ddaia(&Deposition::application, &diay);
 				ddaia.join();
-				break;
-			}
-			if (key == 'k') {
-				Deposition dia;
-				std::thread ddaa(&Deposition::application, &dia);
-				ddaa.join();
 				break;
 			}
 			if (key == ' ') {
