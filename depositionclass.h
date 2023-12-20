@@ -1,5 +1,5 @@
-#ifndef DEPOSITIONCLASS_H
-#define DEPOSITIONCLASS_H
+#pragma once
+
 #include <iostream>
 #include <opencv2/opencv.hpp>
 #include <nidaqmx.h>
@@ -30,6 +30,7 @@ private:
 	std::vector<double> contrastData, grphValues;
 	std::deque<double> pixData, grphVa, lla, feed_deque;
 	int timedelay = 0;
+	int cpos = 0;
 	std::string exportfile;
 	double elapsedTime;
 	bool isCameraOnly;
@@ -37,11 +38,15 @@ private:
 public:
 	Pref pr;
 	Deposition::Deposition() :
-		fwidth(1200), fheight(750), exportfile(), elapsedTime(),
-		averagediff(0), cBR(0), cHT(0), isCameraOnly(false), isFeedbackstart(false)
+		fwidth(GetSystemMetrics(SM_CXSCREEN) - 10), 
+		fheight(GetSystemMetrics(SM_CYSCREEN) - 90), 
+		exportfile(), 
+		elapsedTime(),
+		averagediff(0), 
+		cBR(0), cHT(0), 
+		isCameraOnly(false), 
+		isFeedbackstart(false)
 	{
-		fwidth = GetSystemMetrics(SM_CXSCREEN) - 10;
-		fheight = GetSystemMetrics(SM_CYSCREEN) - 90;
 		mydaq.start(nullptr, "Dev2/ao0", 0);
 		mydaq.start(nullptr, "Dev2/ao1", 0);
 		//mydaq.digitalOut(nullptr, "Dev2/port0/line0", 1);
@@ -66,6 +71,12 @@ public:
 	}
 	int Deposition::getfwidth() const {
 		return fwidth;
+	}
+	void setCpos() {
+		cpos = +1;
+	}
+	int getCpos() {
+		return cpos;
 	}
 	void Deposition::setfheight(int windowHeight) {
 		if (fheight > 0)
@@ -158,10 +169,12 @@ public:
 				bool output = schmittTrigger.processInput(feedbackSD());
 				Memory mm;
 
+				contrastData.push_back(getcurrentBrightness());
+				pixData.push_back(getcurrentBrightness());
+				feed_deque.push_back(feedbackSD());
+				grphValues.push_back(voltage);
+				grphVa.push_back(voltage);
 				if (!isCameraOnly) {
-					contrastData.push_back(getcurrentBrightness());
-					pixData.push_back(getcurrentBrightness());
-					feed_deque.push_back(feedbackSD());
 					if (!isComplete && !isFeedbackstart) {
 						if (voltage < 0) {
 							voltage = 0.0;
@@ -176,7 +189,7 @@ public:
 							isComplete = true;
 							voltage -= pr.maxVolt() / numSteps();
 							setEV(0);
-							writeContrastToCSV(pr.getCommonPath() + exportfile + "top.csv", contrastData, grphValues, feed_deque, "No of frame", "Contrast", "PZT volt");
+							writeContrastToCSV(pr.getCommonPath() + exportfile + "top.csv", contrastData, grphValues, feed_deque, "Contrast", "PZT volt");
 							mydaq.digitalOut(nullptr, "Dev2/port0/line0", 0);
 						}
 					}
@@ -205,7 +218,7 @@ public:
 							isComplete = true;
 							voltage -= pr.maxVolt() / numSteps();
 							setEV(0);
-							writeContrastToCSV(pr.getCommonPath() + exportfile + "top.csv", contrastData, grphValues, feed_deque, "No of frame", "Contrast", "PZT volt");
+							writeContrastToCSV(pr.getCommonPath() + exportfile + "top.csv", contrastData, grphValues, feed_deque, "Contrast", "PZT volt");
 							mydaq.digitalOut(nullptr, "Dev2/port0/line0", 0);
 						}
 					}
@@ -234,7 +247,7 @@ public:
 							isComplete = true;
 							voltage -= pr.maxVolt() / numSteps();
 							setEV(0);
-							writeContrastToCSV(pr.getCommonPath() + exportfile + "top.csv", contrastData, grphValues, feed_deque, "No of frame", "Contrast", "PZT volt");
+							writeContrastToCSV(pr.getCommonPath() + exportfile + "top.csv", contrastData, grphValues, feed_deque, "Contrast", "PZT volt");
 							mydaq.digitalOut(nullptr, "Dev2/port0/line0", 0);
 						}
 					}
@@ -245,16 +258,6 @@ public:
 							voltage = 0;
 							setEV(0);
 							cv::imwrite(pr.getCommonPath() + exportfile + ".jpg", fullScreenImage);
-							/*writeContrastToCSV(pr.getCommonPath() + exportfile + "sd.csv", contrastData, grphValues, feed_deque, "No of frame", "Contrast", "PZT volt");
-							std::string mulpani =
-								"Time," + double2string(elapsedTime, " ") + "\n" +
-								"THmax," + double2string(etime, "") + "\n" +
-								"file," + exportfile + "\n" +
-								"Height," + double2string(pr.maxVolt() * 6, "") + "\n" +
-								"C_th," + double2string(pr.getUpperTh(), "") + "\n" +
-								"V(micro-m/s)," + double2string(pr.maxVolt() * 6 / (numSteps() + timedelay), "");
-							wToCSV(pr.getCommonPath() + exportfile + "debug.csv", mulpani);
-							*/
 							cv::destroyWindow(exportfile);
 							break;
 						}
@@ -263,8 +266,6 @@ public:
 					DAQmxWriteAnalogF64(task2, 1, true, 10.0, DAQmx_Val_GroupByChannel, &ev, nullptr, nullptr);
 					DAQmxWriteAnalogF64(task1, 1, true, 10.0, DAQmx_Val_GroupByChannel, &voltage, nullptr, nullptr);
 					setcurrentHeight(voltage);
-					grphValues.push_back(voltage);
-					grphVa.push_back(voltage);
 					mm.storeValue(voltage);
 					if (key == 'n') {
 						isFeedbackstart = true;
@@ -275,8 +276,14 @@ public:
 						isWithoutredeposition = true;
 						isRedeposition = false;
 					}
-
+					if (key == '9') {
+						isCameraOnly = true;
+					}
 				}
+				if (key == '5') {
+					isCameraOnly = false;
+				}
+
 				cv::imshow(exportfile, fullScreenImage);
 				cv::moveWindow(exportfile, 0, 0);
 				key = cv::waitKey(1);
@@ -286,7 +293,7 @@ public:
 					setEV(0);
 					mydaq.start(nullptr, "Dev2/ao0", 0);
 					mydaq.digitalOut(nullptr, "Dev2/port0/line0", 0);
-					writeContrastToCSV(pr.getCommonPath() + exportfile + "top.csv", contrastData, grphValues, feed_deque, "No of frame", "Contrast", "PZT volt");
+					writeContrastToCSV(pr.getCommonPath() + exportfile + "top.csv", contrastData, grphValues, feed_deque,"Contrast", "PZT volt");
 					if (voltage < 0) {
 						cam.release();
 						cv::destroyAllWindows();
@@ -343,8 +350,8 @@ public:
 		setcurrentBrightness(grayColorRect);
 
 		copyFrame(dframe, fullScreenImage, 0, 0, fwidth / 3, fheight / 2);//ogiginal camera copy to fullscreen 
-		copyFrame(grayColorRect, fullScreenImage, fwidth / 3, 0, fwidth / 3, fheight / 2);//samall copy to second 
-		copyFrame(gRect, fullScreenImage, 2 * fwidth / 3, 0, fwidth / 3, fheight / 2);//big copy to last 
+		//copyFrame(grayColorRect, fullScreenImage, fwidth / 3, 0, fwidth / 3, fheight / 2);//samall copy to second 
+		copyFrame(gRect, fullScreenImage, 1 * fwidth / 3, 0, 2*fwidth / 3, fheight / 2);//big copy to last 
 
 		cv::Rect firstgraph(0, fheight * 0.55, fwidth * 0.75, fheight * 0.15);
 		cv::Mat graapp = fullScreenImage(firstgraph);
@@ -431,7 +438,6 @@ public:
 		}
 		//double newYValue = 50;
 		//graphValues.push_back(newYValue);
-
 		drawYAxisValues(frame, pr.uBGR(0, 0, 0), upperLimit, yxix);
 		drawXAxis(frame, pr.uBGR(0, 0, 0));
 	}
@@ -465,7 +471,6 @@ public:
 		const std::vector<double>& contrastData, 
 		const std::vector<double>& data3, 
 		const std::deque<double>& data4, 
-		const std::string& xaxis, 
 		const std::string& yaxis, 
 		const std::string& name3) 
 	{
@@ -474,7 +479,7 @@ public:
 			std::cerr << "Error opening file for writing." << std::endl;
 			return;
 		}
-		outFile << xaxis + "," + yaxis + "," + name3 + "," + "SD" /* + "," + "min"*/ << std::endl;
+		outFile << yaxis + "," + name3 + "," + "SD" /* + "," + "min"*/ << std::endl;
 		size_t maxSize = max(contrastData.size(), data3.size());
 
 		/*double min_value = DBL_MAX;//for minimum of value of sd
@@ -484,25 +489,24 @@ public:
 			}
 		}*/
 		for (size_t i = 0; i < maxSize; ++i) {
-
-			outFile << i + 1 << ",";
-
-			if (i < contrastData.size()) {
-				outFile << contrastData[i];
+			if (data3[i] != 0.0) {
+				if (i < contrastData.size()) {
+					outFile << contrastData[i];
+				}
+				outFile << ",";
+				if (i < data3.size()) {
+					outFile << data3[i];
+				}
+				outFile << ",";
+				if (i < data4.size()) {
+					outFile << data4[i];
+				}
+				/*outFile << ",";
+				if (i < data4.size()) {
+					outFile << min_value;
+				}*/
+				outFile << std::endl;
 			}
-			outFile << ",";
-			if (i < data3.size()) {
-				outFile << data3[i];
-			}
-			outFile << ",";
-			if (i < data4.size()) {
-				outFile << data4[i];
-			}
-			/*outFile << ",";
-			if (i < data4.size()) {
-				outFile << min_value;
-			}*/
-			outFile << std::endl;
 		}
 		outFile.close();
 	}
@@ -591,4 +595,3 @@ public:
 
 };
 
-#endif // DEPOSITIONCLASS_H
