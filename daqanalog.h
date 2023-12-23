@@ -1,5 +1,6 @@
 #include <nidaqmx.h>
 #include <iostream>
+
 using namespace std;
 class MyDaq {
 private:

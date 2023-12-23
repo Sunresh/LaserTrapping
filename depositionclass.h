@@ -46,8 +46,8 @@ public:
 		mydaq.start(nullptr, "Dev2/ao0", 0);
 		mydaq.start(nullptr, "Dev2/ao1", 0);
 		//mydaq.digitalOut(nullptr, "Dev2/port0/line0", 1);
-		cam.open(pr.getCameraId());
-		//cam.open("C:\\Users\\nares\\Downloads\\ten.mp4");
+		//cam.open(pr.getCameraId());
+		cam.open("C:\\Users\\nares\\Downloads\\nnnn.mp4");
 		double etime = 0;
 		bool isComplete = false;
 		double voltage = 0.0;
@@ -95,6 +95,7 @@ public:
 		double contrast = bri.avg();
 		cBR = contrast;
 	}
+
 	double Deposition::getcurrentBrightness() {
 		return cBR;
 	}
@@ -292,7 +293,7 @@ public:
 		information = cv::Mat::ones(information.size(), information.type()) * 100;
 
 		allgraph(graapp, contrastData, 1, "Brightness");
-		allgraph(graappix, sdValues, 0.3, "SD");
+		allgraph(graappix, sdValues, 0.4, "SD");
 		allgraph(heightgraph, pztValues, pr.maxVolt(), "PZT");
 
 		int barHeight = static_cast<int>((feedbackSD()) * 100);
@@ -476,7 +477,7 @@ public:
 		int countLastFive = 0;
 		double variance = 0.0;
 		double mean = 0;
-		int expectedsize = 30;
+		int expectedsize = 25;
 		if (pixData.empty()) {
 			return 0.0;
 		}
