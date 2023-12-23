@@ -1,0 +1,23 @@
+cmake_minimum_required(VERSION 3.12)
+project(YourProjectName)
+
+set(OpenCV_DIR "C:/opencv/build")
+find_package(OpenCV REQUIRED)
+
+find_library(NIDAQmx_LIBRARY NIDAQmx PATHS "C:/Program Files (x86)/National Instruments/Shared/ExternalCompilerSupport/C/lib64/msvc")
+include_directories("C:/Program Files (x86)/National Instruments/NI-DAQ/DAQmx ANSI C Dev/include")
+include_directories("C:/opencv/build/include")
+
+# Add your existing project files
+add_executable(YourProjectName WIN32 
+			"WindowsProject1.cpp"
+			"WindowsProject1.rc"
+			"framework.h"
+			"Resource.h" 
+			"targetver.h" )
+
+link_directories("C:/opencv/build/x64/v16/lib")
+target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS} ${NIDAQmx_LIBRARY} )
+target_include_directories(${PROJECT_NAME} PRIVATE ${OpenCV_INCLUDE_DIRS})
+
+#set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS")
