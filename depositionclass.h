@@ -8,6 +8,7 @@
 #include "preference.h"
 #include "brightnessclass.h"
 #include "daqanalog.h"
+#include <windows.h>
 
 using namespace std;
 
@@ -47,7 +48,7 @@ public:
 		mydaq.start(nullptr, "Dev2/ao1", 0);
 		//mydaq.digitalOut(nullptr, "Dev2/port0/line0", 1);
 		//cam.open(pr.getCameraId());
-		cam.open("C:\\Users\\nares\\Downloads\\nnnn.mp4");
+		cam.open("C:\\Users\\nares\\Desktop\\LAB\\movie\\open\\five.mp4");
 		double etime = 0;
 		bool isComplete = false;
 		double voltage = 0.0;
@@ -75,24 +76,40 @@ public:
 	int Deposition::getfheight() const {
 		return fheight;
 	}
-	void Deposition::setOutputFileName(std::string filename) {
-		auto now = std::chrono::system_clock::now();
-		auto time_t_now = std::chrono::system_clock::to_time_t(now);
-		struct tm timeinfo;
-		localtime_s(&timeinfo, &time_t_now);
 
-		std::ostringstream oss;
-		oss << std::put_time(&timeinfo, "%Y%m%d_%H%M_%S");
-		//	exportfile = filename + oss.str();
-		exportfile = oss.str();
+	void Deposition::setOutputFileName(std::string filename) {
+			auto now = std::chrono::system_clock::now();
+			auto time_t_now = std::chrono::system_clock::to_time_t(now);
+			struct tm timeinfo;
+	#ifdef _MSC_VER
+			localtime_s(&timeinfo, &time_t_now);
+	#else
+			localtime_r(&time_t_now, &timeinfo);
+	#endif
+
+			std::ostringstream oss;
+			oss << std::put_time(&timeinfo, "%Y%m%d_%H%M_%S");
+			std::ostringstream folder;
+			folder << std::put_time(&timeinfo, "%Y%m%d");
+
+			// Assuming pr is an instance of some class with getCommonPath() method
+			std::string commonPath = pr.getCommonPath();
+
+			// Create the folder inside the common path
+			std::string folderPath = commonPath + "/" + folder.str();
+			// Code to create the folder if it doesn't exist
+			CreateDirectory(folderPath.c_str(), NULL) != 0;
+			// Set the output file name using the common path, folder, and filename
+			exportfile = folder.str()+"/" + oss.str();
 	}
 
 	std::string Deposition::getOutputFileName() const {
 		return exportfile;
 	}
+
 	void Deposition::setcurrentBrightness(cv::Mat& frame) {
 		BrightnessClass bri(frame);
-		double contrast = bri.avg();
+		double contrast = bri.differencesOf();
 		cBR = contrast;
 	}
 
@@ -292,8 +309,8 @@ public:
 		cv::Mat information = fullScreenImage(infoarea);
 		information = cv::Mat::ones(information.size(), information.type()) * 100;
 
-		allgraph(graapp, contrastData, 1, "Brightness");
-		allgraph(graappix, sdValues, 0.4, "SD");
+		allgraph(graapp, contrastData, 10, "Brightness");
+		allgraph(graappix, sdValues, 4, "SD");
 		allgraph(heightgraph, pztValues, pr.maxVolt(), "PZT");
 
 		int barHeight = static_cast<int>((feedbackSD()) * 100);
