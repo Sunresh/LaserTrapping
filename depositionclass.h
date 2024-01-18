@@ -27,7 +27,7 @@ private:
 	bool isWithoutredeposition = true;
 	double voltage = 0.0;
 	cv::Mat frame, dframe, grayColorRect, gRect;
-	std::vector<double> contrastData, pztValues, sdValues;
+	std::vector<double> contrastData, pztValues;  /*sdValues*/
 	int timedelay = 0;
 	std::string exportfile;
 	double elapsedTime;
@@ -170,7 +170,7 @@ public:
 				Memory mm;
 
 				contrastData.push_back(getcurrentBrightness());
-				sdValues.push_back(feedbackSD());
+				//sdValues.push_back(feedbackSD());
 				pztValues.push_back(voltage);
 
 				if (!isCameraOnly) {
@@ -199,7 +199,7 @@ public:
 							isComplete = true;
 							voltage -= pr.maxVolt() / numSteps();
 							setEV(0);
-							writeContrastToCSV(pr.getCommonPath() + exportfile + "top.csv", contrastData, pztValues, sdValues, "Contrast", "PZT volt");
+							writeContrastToCSV(pr.getCommonPath() + exportfile + "top.csv", contrastData, pztValues, /*sdValues,*/ "Contrast", "PZT volt");
 							mydaq.digitalOut(nullptr, "Dev2/port0/line0", 0);
 						}
 					}
@@ -236,7 +236,7 @@ public:
 					setEV(0);
 					mydaq.start(nullptr, "Dev2/ao0", 0);
 					mydaq.digitalOut(nullptr, "Dev2/port0/line0", 0);
-					writeContrastToCSV(pr.getCommonPath() + exportfile + "top.csv", contrastData, pztValues, sdValues,"Contrast", "PZT volt");
+					writeContrastToCSV(pr.getCommonPath() + exportfile + "top.csv", contrastData, pztValues,/* sdValues,*/ "Contrast", "PZT volt");
 					if (voltage < 0) {
 						cam.release();
 						cv::destroyAllWindows();
@@ -296,21 +296,21 @@ public:
 		//copyFrame(grayColorRect, fullScreenImage, fwidth / 3, 0, fwidth / 3, fheight / 2);//samall copy to second 
 		copyFrame(gRect, fullScreenImage, 1 * fwidth / 3, 0, 2*fwidth / 3, fheight / 2);//big copy to last 
 
-		cv::Rect firstgraph(0, fheight * 0.55, fwidth * 0.75, fheight * 0.15);
+		cv::Rect firstgraph(0, fheight * 0.55, fwidth * 0.75, fheight * 0.22);
 		cv::Mat graapp = fullScreenImage(firstgraph);
 
-		cv::Rect secondgraph(0, fheight * 0.70, fwidth * 0.75, fheight * 0.15);//x1,y1,w,h
-		cv::Mat graappix = fullScreenImage(secondgraph);
+		/*cv::Rect secondgraph(0, fheight * 0.70, fwidth * 0.75, fheight * 0.15);//x1,y1,w,h
+		cv::Mat graappix = fullScreenImage(secondgraph);*/
 
-		cv::Rect thirdgraph(0, fheight * 0.85, fwidth * 0.75, fheight * 0.15);
+		cv::Rect thirdgraph(0, fheight * 0.77, fwidth * 0.75, fheight * 0.22);
 		cv::Mat heightgraph = fullScreenImage(thirdgraph);
 
 		cv::Rect infoarea(fwidth * 0.75, fheight * 0.55, fwidth * 0.25, fheight * 0.45);
 		cv::Mat information = fullScreenImage(infoarea);
 		information = cv::Mat::ones(information.size(), information.type()) * 100;
 
-		allgraph(graapp, contrastData, 160, "Brightness");
-		allgraph(graappix, sdValues, 74, "SD");
+		allgraph(graapp, contrastData, 560, "BD");
+		//allgraph(graappix, sdValues, 74, "SD");
 		allgraph(heightgraph, pztValues, pr.maxVolt(), "PZT");
 
 		int barHeight = static_cast<int>((feedbackSD()) * 100);
@@ -405,14 +405,13 @@ public:
 		DrawDashedLine(graphArea, cv::Point(30, graphArea.rows * 0.15), cv::Point(graphArea.cols, graphArea.rows * 0.15), pr.uBGR(0, 0, 255), 1, "dotted", 10);
 		line(graphArea, cv::Point(30, graphArea.rows * 0.15), cv::Point(30, graphArea.rows * 0.95), color, 1);
 		cv::line(graphArea, cv::Point(30, graphArea.rows * 0.95), cv::Point(graphArea.cols, graphArea.rows * 0.95), color, 1, cv::LINE_8);
-		//DrawDashedLine(graphArea, cv::Point(30, graphArea.rows * thline), cv::Point(graphArea.cols, graphArea.rows * thline), green, 1, "dotted", 10);
 	}
 
 	void Deposition::writeContrastToCSV(
 		const std::string& filename, 
 		const std::vector<double>& contrastData, 
 		const std::vector<double>& data3, 
-		const std::vector<double>& data4, 
+		/*const std::vector<double>& data4,*/
 		const std::string& yaxis, 
 		const std::string& name3) 
 	{
@@ -421,7 +420,7 @@ public:
 			std::cerr << "Error opening file for writing." << std::endl;
 			return;
 		}
-		outFile <<"SN,"+ yaxis + "," + name3 + ",SD" /* + "," + "min"*/ << std::endl;
+		outFile <<"SN,"+ yaxis + "," + name3 << std::endl;
 		size_t maxSize = max(contrastData.size(), data3.size());
 
 		size_t outputIndex = 1;
@@ -434,10 +433,6 @@ public:
 				outFile << ",";
 				if (i < data3.size()) {
 					outFile << data3[i];
-				}
-				outFile << ",";
-				if (i < data4.size()) {
-					outFile << data4[i];
 				}
 				outFile << std::endl;
 				++outputIndex;
