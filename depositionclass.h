@@ -109,7 +109,7 @@ public:
 
 	void Deposition::setcurrentBrightness(cv::Mat& frame) {
 		BrightnessClass bri(frame);
-		double contrast = bri.differencesOf();
+		double contrast = bri.newt();
 		cBR = contrast;
 	}
 
@@ -309,8 +309,8 @@ public:
 		cv::Mat information = fullScreenImage(infoarea);
 		information = cv::Mat::ones(information.size(), information.type()) * 100;
 
-		allgraph(graapp, contrastData, 10, "Brightness");
-		allgraph(graappix, sdValues, 4, "SD");
+		allgraph(graapp, contrastData, 160, "Brightness");
+		allgraph(graappix, sdValues, 74, "SD");
 		allgraph(heightgraph, pztValues, pr.maxVolt(), "PZT");
 
 		int barHeight = static_cast<int>((feedbackSD()) * 100);
