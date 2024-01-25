@@ -123,9 +123,6 @@ public:
 	double Deposition::getcurrentHeight() {
 		return cHT;
 	}
-	double Deposition::feedbackSD() {
-		return stdev(contrastData);
-	}
 	void Deposition::getelapsedTime(std::chrono::time_point<std::chrono::high_resolution_clock> startTime) {
 		auto currentTime = std::chrono::high_resolution_clock::now();
 		std::chrono::duration<double> elapsed = currentTime - startTime;
@@ -166,15 +163,18 @@ public:
 				getelapsedTime(startTime);
 				laserspot(dframe, elapsedTime, fullScreenImage);
 				SchmittTrigger schmittTrigger(pr.getUpperTh(), pr.getLowerTh()); // Set upper and lower thresholds
-				bool output = schmittTrigger.processInput(feedbackSD());
+				bool output = schmittTrigger.processInput(getcurrentBrightness());
 				Memory mm;
 
 				contrastData.push_back(getcurrentBrightness());
-				//sdValues.push_back(feedbackSD());
 				pztValues.push_back(voltage);
 
 				if (!isCameraOnly) {
 					if (!isComplete) {
+						if (voltage>0&&voltage<0.25) {
+							voltage += pr.maxVolt() / (numSteps() + timedelay);
+							setEV();
+						}
 						if (voltage < 0) {
 							voltage = 0.0;
 							timedelay = 0.0;
@@ -313,7 +313,7 @@ public:
 		//allgraph(graappix, sdValues, 74, "SD");
 		allgraph(heightgraph, pztValues, pr.maxVolt(), "PZT");
 
-		int barHeight = static_cast<int>((feedbackSD()) * 100);
+		int barHeight = static_cast<int>((getcurrentBrightness()) * 100);
 		int hightofbrightness = 100;
 		Deposition::drawRectangle(fullScreenImage, fullScreenImage.cols * 0.99, fullScreenImage.rows * 0.5 - barHeight, fullScreenImage.cols, fullScreenImage.rows * 0.5, pr.uBGR(0, 0, 255), -1);
 
@@ -333,8 +333,6 @@ public:
 		drawText(information, double2string(pr.getDurationTime(), "Expected Time: "), 0, y, 0.5, pr.uBGR(0, 0, 255), 1);
 		y += 30;
 		drawText(information, double2string(pr.getRadiusBox(), "Spot size: "), 0, y, 0.5, pr.uBGR(0, 0, 255), 1);
-		y += 30;
-		drawText(information, double2string(feedbackSD(), "SD: "), 0, y, 0.5, pr.uBGR(0, 0, 255), 1);
 		y += 30;
 		drawText(information, double2string(pr.maxVolt() * 6 / (numSteps() + timedelay), "V(micro-m/s): "), 0, y, 0.5, pr.uBGR(0, 0, 255), 1);
 		y += 30;
