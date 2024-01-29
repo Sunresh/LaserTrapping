@@ -31,18 +31,18 @@ private:
 	int timedelay = 0;
 	std::string exportfile;
 	double elapsedTime;
-	bool isCameraOnly;
+	bool isCameraOnly = true;
 	char key;
+	std::string WindowName = "LaserTrap";
 public:
 	Pref pr;
 	Deposition::Deposition() :
 		fwidth(GetSystemMetrics(SM_CXSCREEN) - 10), 
 		fheight(GetSystemMetrics(SM_CYSCREEN) - 90), 
-		exportfile(), 
+		exportfile("Default"),
 		elapsedTime(),
 		averagediff(0), 
-		cBR(0), cHT(0), 
-		isCameraOnly(true)
+		cBR(0), cHT(0)
 	{
 		mydaq.start(nullptr, "Dev2/ao0", 0);
 		mydaq.start(nullptr, "Dev2/ao1", 0);
@@ -109,7 +109,7 @@ public:
 
 	void Deposition::setcurrentBrightness(cv::Mat& frame) {
 		BrightnessClass bri(frame);
-		double contrast = bri.newt();
+		double contrast = bri.differencesOf();
 		cBR = contrast;
 	}
 
@@ -140,6 +140,15 @@ public:
 		cv::destroyAllWindows();
 		cout << "End" << endl;
 	}
+	static void Deposition::ButtonClick(int event, int x, int y, int flags, void* param) {
+		if (event == cv::EVENT_LBUTTONDOWN) {
+			std::cout << "\n(" << x << ", " << y << ")\n" << std::endl;
+			if (x>0&&x<12&&y>0&&y<12) {
+				std::cout << "clicked";
+			}
+		}
+	}
+
 	void Deposition::application() {
 		try {
 			if (!cam.isOpened()) {
@@ -155,6 +164,8 @@ public:
 			auto startTime = std::chrono::high_resolution_clock::now();
 			cv::Mat fullScreenImage(fheight, fwidth, CV_8UC3, pr.uBGR(255, 255, 255));
 			setOutputFileName(pr.getCommonPath());
+			cv::namedWindow(WindowName);
+			cv::setMouseCallback(WindowName, Deposition::ButtonClick, &fullScreenImage);
 			while (true) {
 				cam >> dframe;
 				if (dframe.empty()) {
@@ -168,11 +179,10 @@ public:
 
 				contrastData.push_back(getcurrentBrightness());
 				pztValues.push_back(voltage);
-
 				if (!isCameraOnly) {
 					if (!isComplete) {
-						if (voltage>0&&voltage<0.25) {
-							voltage += pr.maxVolt() / (numSteps() + timedelay);
+						if (voltage>0&&voltage<0.5) {
+							voltage += 1 / (99999*numSteps()*999999);
 							setEV();
 						}
 						if (voltage < 0) {
@@ -199,9 +209,9 @@ public:
 							isComplete = true;
 							voltage -= pr.maxVolt() / numSteps();
 							setEV(0);
-							writeContrastToCSV(pr.getCommonPath() + exportfile + "top.csv", contrastData, pztValues, /*sdValues,*/ "Contrast", "PZT volt");
 							mydaq.digitalOut(nullptr, "Dev2/port0/line0", 0);
 						}
+						writeContrastToCSV(pr.getCommonPath() + exportfile + ".csv", contrastData, pztValues, /*sdValues,*/ "BD", "PZT volt");
 					}
 					if (isComplete) {
 						voltage -= pr.maxVolt() / (numSteps() * 0.2);
@@ -210,7 +220,7 @@ public:
 							voltage = 0;
 							setEV(0);
 							cv::imwrite(pr.getCommonPath() + exportfile + ".jpg", fullScreenImage);
-							cv::destroyWindow(exportfile);
+							cv::destroyWindow(WindowName);
 							break;
 						}
 					}
@@ -226,9 +236,12 @@ public:
 				if (key == '5') {
 					isCameraOnly = false;
 				}
+				if (key == 'rr') {
+					isCameraOnly = false;
+				}
 
-				cv::imshow(exportfile, fullScreenImage);
-				cv::moveWindow(exportfile, 0, 0);
+				cv::imshow(WindowName, fullScreenImage);
+				cv::moveWindow(WindowName, 0, 0);
 				key = cv::waitKey(1);
 				if (key == 'q' || key == ' ') {
 					isComplete = true;
@@ -236,7 +249,6 @@ public:
 					setEV(0);
 					mydaq.start(nullptr, "Dev2/ao0", 0);
 					mydaq.digitalOut(nullptr, "Dev2/port0/line0", 0);
-					writeContrastToCSV(pr.getCommonPath() + exportfile + "top.csv", contrastData, pztValues,/* sdValues,*/ "Contrast", "PZT volt");
 					if (voltage < 0) {
 						cam.release();
 						cv::destroyAllWindows();
@@ -248,23 +260,13 @@ public:
 			DAQmxClearTask(task2);
 		}
 		catch (const std::exception& e) {
-			std::cerr << "\nAn exception occurred: \n" << e.what() << "\n\n" << std::endl;
+			std::cerr << "\nAn exception occurred by Naresh: \n" << e.what() << "\n\n" << std::endl;
 		}
 		catch (...) {
-			std::cerr << "\nAn unknown exception occurred.\n" << std::endl;
+			std::cerr << "\nAn unknown exception occurred by LaserTrapping.\n" << std::endl;
 		}
 	}
 
-	void Deposition::onMouse(int event, int x, int y, int flags, void* userdata) {
-		cv::Mat& frame = *static_cast<cv::Mat*>(userdata);
-		frame(cv::Rect(0, 0, 200, 20)).setTo(cv::Scalar(255, 255, 255));
-		if (event == cv::EVENT_MOUSEMOVE) {
-			std::string coordinates = "Coordinates: (" + std::to_string(x) + ", " + std::to_string(y) + ")";
-			cv::putText(frame, coordinates, cv::Point(10, 15), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0), 1);
-		}
-		cv::imshow("Status of deposition", frame);
-		cv::moveWindow("Status of deposition", 0, 0);
-	}
 
 	void Deposition::laserspot(cv::Mat& frame, double elapsedTime, cv::Mat& fullScreenImage) {
 		int XaxisX2, YaxisY2;
@@ -292,7 +294,7 @@ public:
 
 		setcurrentBrightness(grayColorRect);
 
-		copyFrame(dframe, fullScreenImage, 0, 0, fwidth / 3, fheight / 2);//ogiginal camera copy to fullscreen 
+		copyFrame(dframe, fullScreenImage, 0, 0, fwidth / 3, fheight / 2); 
 		//copyFrame(grayColorRect, fullScreenImage, fwidth / 3, 0, fwidth / 3, fheight / 2);//samall copy to second 
 		copyFrame(gRect, fullScreenImage, 1 * fwidth / 3, 0, 2*fwidth / 3, fheight / 2);//big copy to last 
 
@@ -320,6 +322,10 @@ public:
 		int barHe = static_cast<double>((voltage) * 100);
 		int highestvalueofvoltage = 100;
 		Deposition::drawRectangle(fullScreenImage, 0, pr.maxVolt() * 100 - (barHe), 5, pr.maxVolt() * 100, pr.uBGR(0, 255, 0), -1);
+
+		Deposition::drawRectangle(fullScreenImage, 0,0,12,12, pr.uBGR(0, 255, 0), 1);
+		Deposition::drawRectangle(fullScreenImage, 0,12,12,24, pr.uBGR(0, 255, 0), 1);
+		Deposition::drawRectangle(fullScreenImage, 0,24,12,36, pr.uBGR(0, 255, 0), 1);
 
 		int y = 30;
 		drawText(information, double2string(elapsedTime, "T: ") + double2string(etime, "   THmax: "), 0, y, 0.5, pr.uBGR(0, 0, 255), 1);
