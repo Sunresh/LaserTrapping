@@ -31,6 +31,7 @@ private:
 	int timedelay = 0;
 	std::string exportfile;
 	double elapsedTime;
+	double padding = 10.0;
 	bool isCameraOnly = true;
 	char key;
 	std::string WindowName = "LaserTrap";
@@ -141,24 +142,23 @@ public:
 	}
 	static void ButtonClick(int event, int x, int y, int flags, void* param) {
 		auto self = static_cast<Deposition*>(param);
-
 		if (event == cv::EVENT_LBUTTONDOWN) {
-			std::cout << "\n(" << x << ", " << y << ")\n" << std::endl;
-			if (x > 0 && x < self->fwidth * 0.10 && y>0 && y < self->fheight*0.10) {
-				std::cout << "\nclicked FALSE\n";
-
-				// Toggle isCameraOnly on mouse click
-				self->isCameraOnly = FALSE;
+			if (x > self->padding && x < (self->fwidth * 0.10)- self->padding) {
+				if (y > self->padding && y < (self->fheight * 0.10- self->padding)) {
+					self->isCameraOnly = false;//start
+				}
+				else if (y > (self->fheight * 0.10) + self->padding && y < (self->fheight * 0.20) - self->padding) {
+					self->isCameraOnly = true;//pause
+				}
+				else if (y > (self->fheight * 0.20) + self->padding && y < (self->fheight * 0.30 - self->padding)) {
+					self->isComplete = true;//stop
+				}
+				else {
+					std::cout << "\n(" << x << ", " << y << ")\n" << std::endl;
+				}
 			}
-			if (x > 0 && x < self->fwidth * 0.10 && y>self->fheight * 0.10 && y < self->fheight * 0.20) {
-				std::cout << "\nclicked TRUE\n";
-				// Toggle isCameraOnly on mouse click
-				self->isCameraOnly = TRUE;
-			}
-			if (x > 0 && x < self->fwidth * 0.10 && y>self->fheight * 0.20 && y < self->fheight * 0.30) {
-				std::cout << "\nclicked STOP\n";
-				// Toggle isCameraOnly on mouse click
-				self->isComplete = TRUE;
+			else {
+				std::cout << "\n(" << x << ", " << y << ")\n" << std::endl;
 			}
 		}
 	}
@@ -337,10 +337,14 @@ public:
 		int barHe = static_cast<double>((voltage) * 100);
 		int highestvalueofvoltage = 100;
 		Deposition::drawRectangle(fullScreenImage, 0, pr.maxVolt() * 100 - (barHe), 5, pr.maxVolt() * 100, pr.uBGR(0, 255, 0), -1);
-		double padding = 10.0;
-		Deposition::drawRectangle(fullScreenImage, padding, padding, (fwidth * 0.10)-(padding), (fheight * 0.10)-(padding), pr.uBGR(0, 255, 0), -1, "Stsrt");
-		Deposition::drawRectangle(fullScreenImage, padding, (fheight * 0.10)+padding, (fwidth * 0.10)-(padding), (fheight * 0.20)-(padding), pr.uBGR(255, 0, 0), -1, "Pause");
-		Deposition::drawRectangle(fullScreenImage, padding, (fheight*0.20)+padding, (fwidth*0.10)-(padding), (fheight*0.30)-(padding), pr.uBGR(0, 0, 255), -1,"Stop");
+		
+		Deposition::drawRectangle(fullScreenImage, padding, padding, (fwidth * 0.10) - (padding), (fheight * 0.10) - (padding), pr.uBGR(0, 255, 0), -1);
+		Deposition::drawRectangle(fullScreenImage, padding, (fheight * 0.10) + padding, (fwidth * 0.10) - (padding), (fheight * 0.20) - (padding), pr.uBGR(255, 0, 0), -1);
+		Deposition::drawRectangle(fullScreenImage, padding, (fheight * 0.20) + padding, (fwidth * 0.10) - (padding), (fheight * 0.30) - (padding), pr.uBGR(0, 0, 255), -1);
+
+		Deposition::drawRectangle(fullScreenImage, padding, padding, (fwidth * 0.10) - (padding), (fheight * 0.10) - (padding), pr.uBGR(0, 0, 255), 1, "Stsrt");
+		Deposition::drawRectangle(fullScreenImage, padding, (fheight * 0.10) + padding, (fwidth * 0.10) - (padding), (fheight * 0.20) - (padding), pr.uBGR(0, 255, 0), 1, "Pause");
+		Deposition::drawRectangle(fullScreenImage, padding, (fheight * 0.20) + padding, (fwidth * 0.10) - (padding), (fheight * 0.30) - (padding), pr.uBGR(255,0,0), 1, "Stop");
 
 		int y = 30;
 		drawText(information, double2string(elapsedTime, "T: ") + double2string(etime, "   THmax: "), 0, y, 0.5, pr.uBGR(0, 0, 255), 1);
@@ -409,7 +413,7 @@ public:
 
 	void Deposition::drawRectangle(cv::Mat& frame, int x1, int y1, int x2, int y2, const cv::Scalar& color, int thickness , const std::string& text ="") {
 		cv::rectangle(frame, cv::Point(x1, y1), cv::Point(x2, y2), color, thickness);
-		cv::putText(frame, text, cv::Point(x1+10, y2-10), cv::FONT_HERSHEY_SIMPLEX, 1, pr.uBGR(255, 255, 255), 1);
+		cv::putText(frame, text, cv::Point(x1+10, (y1+y2)*0.5), cv::FONT_HERSHEY_SIMPLEX, 1, pr.uBGR(255, 255, 255), 1);
 	}
 
 	void Deposition::drawYAxisValues(cv::Mat& graphArea, const cv::Scalar& color, const double& text, const std::string& yaxis) {
