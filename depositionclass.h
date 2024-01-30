@@ -50,34 +50,33 @@ public:
 		//cam.open(pr.getCameraId());
 		cam.open("C:\\Users\\nares\\Desktop\\LAB\\movie\\open\\five.mp4");
 		double etime = 0;
-		bool isComplete = false;
 		double voltage = 0.0;
 		cv::Mat frame, dframe, grayColorRect, gRect;
 		int timedelay = 0;
 	}
-	int Deposition::numSteps() {
+	int numSteps() {
 		return  pr.getDurationTime() * 100;
 	}
-	void Deposition::setfwidth(int windowwidth) {
+	void setfwidth(int windowwidth) {
 		if (fwidth > 0)
 			fwidth = windowwidth;
 		else
 			throw std::invalid_argument("Height must be greater than 0.");
 	}
-	int Deposition::getfwidth() const {
+	int getfwidth() const {
 		return fwidth;
 	}
-	void Deposition::setfheight(int windowHeight) {
+	void setfheight(int windowHeight) {
 		if (fheight > 0)
 			fheight = windowHeight;
 		else
 			throw std::invalid_argument("Height must be greater than 0.");
 	}
-	int Deposition::getfheight() const {
+	int getfheight() const {
 		return fheight;
 	}
 
-	void Deposition::setOutputFileName(std::string filename) {
+	void setOutputFileName(std::string filename) {
 			auto now = std::chrono::system_clock::now();
 			auto time_t_now = std::chrono::system_clock::to_time_t(now);
 			struct tm timeinfo;
@@ -140,16 +139,31 @@ public:
 		cv::destroyAllWindows();
 		cout << "End" << endl;
 	}
-	static void Deposition::ButtonClick(int event, int x, int y, int flags, void* param) {
+	static void ButtonClick(int event, int x, int y, int flags, void* param) {
+		auto self = static_cast<Deposition*>(param);
+
 		if (event == cv::EVENT_LBUTTONDOWN) {
 			std::cout << "\n(" << x << ", " << y << ")\n" << std::endl;
-			if (x>0&&x<12&&y>0&&y<12) {
-				std::cout << "clicked";
+			if (x > 0 && x < self->fwidth * 0.10 && y>0 && y < self->fheight*0.10) {
+				std::cout << "\nclicked FALSE\n";
+
+				// Toggle isCameraOnly on mouse click
+				self->isCameraOnly = FALSE;
+			}
+			if (x > 0 && x < self->fwidth * 0.10 && y>self->fheight * 0.10 && y < self->fheight * 0.20) {
+				std::cout << "\nclicked TRUE\n";
+				// Toggle isCameraOnly on mouse click
+				self->isCameraOnly = TRUE;
+			}
+			if (x > 0 && x < self->fwidth * 0.10 && y>self->fheight * 0.20 && y < self->fheight * 0.30) {
+				std::cout << "\nclicked STOP\n";
+				// Toggle isCameraOnly on mouse click
+				self->isComplete = TRUE;
 			}
 		}
 	}
 
-	void Deposition::application() {
+	void application() {
 		try {
 			if (!cam.isOpened()) {
 				return;
@@ -164,8 +178,9 @@ public:
 			auto startTime = std::chrono::high_resolution_clock::now();
 			cv::Mat fullScreenImage(fheight, fwidth, CV_8UC3, pr.uBGR(255, 255, 255));
 			setOutputFileName(pr.getCommonPath());
+			Deposition dep;
 			cv::namedWindow(WindowName);
-			cv::setMouseCallback(WindowName, Deposition::ButtonClick, &fullScreenImage);
+			cv::setMouseCallback(WindowName, &Deposition::ButtonClick, &dep);
 			while (true) {
 				cam >> dframe;
 				if (dframe.empty()) {
@@ -179,8 +194,8 @@ public:
 
 				contrastData.push_back(getcurrentBrightness());
 				pztValues.push_back(voltage);
-				if (!isCameraOnly) {
-					if (!isComplete) {
+				if (!dep.isCameraOnly) {
+					if (!dep.isComplete) {
 						if (voltage>0&&voltage<0.5) {
 							voltage += 1 / (99999*numSteps()*999999);
 							setEV();
@@ -204,7 +219,7 @@ public:
 							isRedeposition = true;
 							isWithoutredeposition = false;
 						}
-						if (voltage >= pr.maxVolt() && !isComplete) {
+						if (voltage >= pr.maxVolt() && !dep.isComplete) {
 							etime = elapsedTime;
 							isComplete = true;
 							voltage -= pr.maxVolt() / numSteps();
@@ -213,7 +228,7 @@ public:
 						}
 						writeContrastToCSV(pr.getCommonPath() + exportfile + ".csv", contrastData, pztValues, /*sdValues,*/ "BD", "PZT volt");
 					}
-					if (isComplete) {
+					if (dep.isComplete) {
 						voltage -= pr.maxVolt() / (numSteps() * 0.2);
 						setEV(0);
 						if (voltage < 0) {
@@ -294,9 +309,9 @@ public:
 
 		setcurrentBrightness(grayColorRect);
 
-		copyFrame(dframe, fullScreenImage, 0, 0, fwidth / 3, fheight / 2); 
+		copyFrame(dframe, fullScreenImage, fwidth*0.1, 0, fwidth*0.40, fheight*0.5);
 		//copyFrame(grayColorRect, fullScreenImage, fwidth / 3, 0, fwidth / 3, fheight / 2);//samall copy to second 
-		copyFrame(gRect, fullScreenImage, 1 * fwidth / 3, 0, 2*fwidth / 3, fheight / 2);//big copy to last 
+		copyFrame(gRect, fullScreenImage,  fwidth*0.50, 0, fwidth*0.50, fheight*0.5);//big copy to last 
 
 		cv::Rect firstgraph(0, fheight * 0.55, fwidth * 0.75, fheight * 0.22);
 		cv::Mat graapp = fullScreenImage(firstgraph);
@@ -322,10 +337,10 @@ public:
 		int barHe = static_cast<double>((voltage) * 100);
 		int highestvalueofvoltage = 100;
 		Deposition::drawRectangle(fullScreenImage, 0, pr.maxVolt() * 100 - (barHe), 5, pr.maxVolt() * 100, pr.uBGR(0, 255, 0), -1);
-
-		Deposition::drawRectangle(fullScreenImage, 0,0,12,12, pr.uBGR(0, 255, 0), 1);
-		Deposition::drawRectangle(fullScreenImage, 0,12,12,24, pr.uBGR(0, 255, 0), 1);
-		Deposition::drawRectangle(fullScreenImage, 0,24,12,36, pr.uBGR(0, 255, 0), 1);
+		double padding = 10.0;
+		Deposition::drawRectangle(fullScreenImage, padding, padding, (fwidth * 0.10)-(padding), (fheight * 0.10)-(padding), pr.uBGR(0, 255, 0), -1, "Stsrt");
+		Deposition::drawRectangle(fullScreenImage, padding, (fheight * 0.10)+padding, (fwidth * 0.10)-(padding), (fheight * 0.20)-(padding), pr.uBGR(255, 0, 0), -1, "Pause");
+		Deposition::drawRectangle(fullScreenImage, padding, (fheight*0.20)+padding, (fwidth*0.10)-(padding), (fheight*0.30)-(padding), pr.uBGR(0, 0, 255), -1,"Stop");
 
 		int y = 30;
 		drawText(information, double2string(elapsedTime, "T: ") + double2string(etime, "   THmax: "), 0, y, 0.5, pr.uBGR(0, 0, 255), 1);
@@ -392,8 +407,9 @@ public:
 		cv::putText(frame, text, cv::Point(x, y), cv::FONT_HERSHEY_SIMPLEX, fontSize, color, thickness);
 	}
 
-	void Deposition::drawRectangle(cv::Mat& frame, int x1, int y1, int x2, int y2, const cv::Scalar& color, int thickness) {
+	void Deposition::drawRectangle(cv::Mat& frame, int x1, int y1, int x2, int y2, const cv::Scalar& color, int thickness , const std::string& text ="") {
 		cv::rectangle(frame, cv::Point(x1, y1), cv::Point(x2, y2), color, thickness);
+		cv::putText(frame, text, cv::Point(x1+10, y2-10), cv::FONT_HERSHEY_SIMPLEX, 1, pr.uBGR(255, 255, 255), 1);
 	}
 
 	void Deposition::drawYAxisValues(cv::Mat& graphArea, const cv::Scalar& color, const double& text, const std::string& yaxis) {
