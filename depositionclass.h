@@ -311,9 +311,9 @@ public:
 
 		setcurrentBrightness(grayColorRect);
 
-		copyFrame(dframe, fullScreenImage, fwidth*0.1, 0, fwidth*0.40, fheight*0.5);
+		copyFrame(dframe, fullScreenImage, fwidth*0.2, 0, fwidth*0.40, fheight*0.5);
 		//copyFrame(grayColorRect, fullScreenImage, fwidth / 3, 0, fwidth / 3, fheight / 2);//samall copy to second 
-		copyFrame(gRect, fullScreenImage,  fwidth*0.50, 0, fwidth*0.50, fheight*0.5);//big copy to last 
+		copyFrame(gRect, fullScreenImage,  fwidth*0.60, 0, fwidth*0.40, fheight*0.5);//big copy to last 
 
 		cv::Rect firstgraph(0, fheight * 0.55, fwidth * 0.75, fheight * 0.22);
 		cv::Mat graapp = fullScreenImage(firstgraph);
@@ -340,13 +340,10 @@ public:
 		int highestvalueofvoltage = 100;
 		Deposition::drawRectangle(fullScreenImage, 0, pr.maxVolt() * 100 - (barHe), 5, pr.maxVolt() * 100, pr.uBGR(0, 255, 0), -1);
 		
-		Deposition::drawRectangle(fullScreenImage, padding, padding, (fwidth * 0.10) - (padding), (fheight * 0.10) - (padding), pr.uBGR(0, 255, 0), -1);
-		Deposition::drawRectangle(fullScreenImage, padding, (fheight * 0.10) + padding, (fwidth * 0.10) - (padding), (fheight * 0.20) - (padding), pr.uBGR(255, 0, 0), -1);
-		Deposition::drawRectangle(fullScreenImage, padding, (fheight * 0.20) + padding, (fwidth * 0.10) - (padding), (fheight * 0.30) - (padding), pr.uBGR(0, 0, 255), -1);
 
-		Deposition::drawRectangle(fullScreenImage, padding, padding, (fwidth * 0.10) - (padding), (fheight * 0.10) - (padding), pr.uBGR(0, 0, 255), 1, "Stsrt");
-		Deposition::drawRectangle(fullScreenImage, padding, (fheight * 0.10) + padding, (fwidth * 0.10) - (padding), (fheight * 0.20) - (padding), pr.uBGR(0, 255, 0), 1, "Pause");
-		Deposition::drawRectangle(fullScreenImage, padding, (fheight * 0.20) + padding, (fwidth * 0.10) - (padding), (fheight * 0.30) - (padding), pr.uBGR(255,0,0), 1, "Stop");
+		createBtn(fullScreenImage, padding, (fheight * 0) + padding, (fwidth * 0.10) - (padding), (fheight * 0.10) - (padding), pr.uBGR(10, 255, 10), "Start");
+		createBtn(fullScreenImage, padding, (fheight * 0.10) + padding, (fwidth * 0.10) - (padding), (fheight * 0.20) - (padding), pr.uBGR(255, 55, 0), "Pause");
+		createBtn(fullScreenImage, padding, (fheight * 0.20) + padding, (fwidth * 0.10) - (padding), (fheight * 0.30) - (padding), pr.uBGR(0, 55, 255), "Stop");
 
 		int y = 30;
 		drawText(information, double2string(elapsedTime, "T: ") + double2string(etime, "   THmax: "), 0, y, 0.5, pr.uBGR(0, 0, 255), 1);
@@ -372,6 +369,11 @@ public:
 			drawRectangle(information, 0, y, 25, y + 20, pr.uBGR(0, 255, 0), -1);
 		}
 	}
+	void Deposition::createBtn(cv::Mat& img, double x1, double y1, double x2, double y2, const cv::Scalar& color, const std::string& txt) {
+		Deposition::drawRectangle(img, x1, y1, x2, y2, pr.uBGR(0, 0, 0), -1);
+		Deposition::drawRectangle(img, x1+1, y1+1, x2-1, y2-1, pr.uBGR(255, 255, 255), -1);
+		Deposition::drawRectangle(img, x1+2, y1+2, x2-2, y2-2, color, -1, txt);
+	}
 	void Deposition::copyFrame(cv::Mat& frame, cv::Mat& screenImage, int x, int y, int x2, int y2) {
 		// Validate that x, y, x2, and y2 are non-negative
 		if (x < 0 || y < 0 || x2 < 0 || y2 < 0) {
@@ -386,15 +388,15 @@ public:
 	}
 
 	void Deposition::allgraph(cv::Mat& frame, std::vector<double>& graphValues, double upperLimit, const std::string& yxix) {
-		const int startPointX = 30;
+		int startPointX = 30;
 		if (graphValues.empty()) {
 			return;
 		}
 		int height = frame.rows;
 		int width = frame.cols;
 		if (graphValues.size() >= static_cast<size_t>(width - startPointX)) {
-			// Erase elements from the beginning to keep the size within the limit
-			graphValues.erase(graphValues.begin(), graphValues.begin() + (graphValues.size() - (width - startPointX)));
+			int elementsToSkip = graphValues.size() - (width - startPointX);
+			startPointX -= elementsToSkip;
 		}
 		cv::Point startPoint(startPointX, height * 0.5);
 		frame = cv::Scalar(255, 255, 255);
