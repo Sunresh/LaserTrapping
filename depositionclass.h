@@ -196,16 +196,18 @@ public:
 				pztValues.push_back(voltage);
 				if (!dep.isCameraOnly) {
 					if (!dep.isComplete) {
-						if (voltage>0&&voltage<0.5) {
-							voltage += 1 / (99999*numSteps()*999999);
-							setEV();
-						}
+						
 						if (voltage < 0) {
 							voltage = 0.0;
 							timedelay = 0.0;
 						}
 						if (output && isWithoutredeposition && !isRedeposition) {
-							voltage += pr.maxVolt() / (numSteps());
+							if (voltage < (0.04*pr.maxVolt())) {
+								voltage += (0.0002 * pr.maxVolt());
+							}
+							else {
+								voltage += pr.maxVolt() / (numSteps());
+							}
 							setEV();
 						}
 						if (output && isRedeposition) {
