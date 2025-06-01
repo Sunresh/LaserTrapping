@@ -1,6 +1,6 @@
 ﻿project(Onemore)
 
-set(OpenCV_DIR "C:/opencv/build")
+set(OpenCV_DIR "${CMAKE_SOURCE_DIR}/opencv/build")
 find_package(OpenCV REQUIRED)
 
 find_library(NIDAQmx_LIBRARY NIDAQmx PATHS "C:/Program Files (x86)/National Instruments/Shared/ExternalCompilerSupport/C/lib64/msvc")
