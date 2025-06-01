@@ -7,6 +7,7 @@
 #include "preference.h"
 #include "brightnessclass.h"
 #include <windows.h>
+#include "Logger.h"
 
 using namespace std;
 
@@ -41,6 +42,7 @@ public:
 		cBR(0), cHT(0)
 	{
 		std::string videoPath = "C:/Users/dayab/Documents/github/LaserTrapping/sample.mp4";
+		Logger::log(videoPath);
 		// Try to open the video with FFmpeg backend explicitly
 		//cv::VideoCapture cap(videoPath, cv::CAP_FFMPEG);
 		//cam.open(pr.getCameraId());
