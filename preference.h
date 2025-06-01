@@ -1,18 +1,17 @@
 #ifndef PREFERENCE_H
 #define PREFERENCE_H
 
-#include <NIDAQmx.h>
 #include <string>
 #include <vector>
 #include <conio.h>
 #include <iostream>
 #include <opencv2/opencv.hpp>
-#include <nidaqmx.h>
 #include <sstream>
 #include <fstream>
 #include <Windows.h>
 #include <ShlObj.h>
 #include <cfloat>
+#include <filesystem>
 
 using namespace std;
 
@@ -83,14 +82,12 @@ public:
 	}
 
 	Pref::Pref() : height(), threshold(), time() {
-		PWSTR path;
-		if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_Desktop, 0, NULL, &path))) {
-			DesktopFolder = std::string(path, path + wcslen(path));
-			CoTaskMemFree(path);
-		}
-		else {
-			std::wcerr << L"Failed to get the desktop path" << std::endl;
-		}
+		// Get the project root (assume current working directory)
+		std::string projectRoot = std::filesystem::current_path().string();
+		// Create a folder named "DesktopFolder" inside the project root
+		DesktopFolder = projectRoot + "/DesktopFolder";
+		// Create the folder if it doesn't exist
+		std::filesystem::create_directories(DesktopFolder);
 		LoadPreferences();
 	}
 	cv::Scalar uBGR(int i,int j,int k) {
@@ -199,7 +196,28 @@ public:
 		getUserInput("spot from top", userPrefs.top);
 		saveCSV(getprefPath(), userPrefs);
 	}
+	void Pref::create_file_with_full_path(const std::string& filename) {
+		// Get the parent directory from the filename
+		std::filesystem::path filePath(filename);
+		std::filesystem::path parentDir = filePath.parent_path();
+
+		// Create parent directories if they don't exist
+		if (!parentDir.empty()) {
+			std::filesystem::create_directories(parentDir);
+		}
+
+		// Create the file (or open for writing)
+		std::ofstream ofs(filename);
+		if (ofs) {
+			ofs << "This is a test file.\n";
+			std::cout << "File created: " << filename << std::endl;
+		}
+		else {
+			std::cerr << "Failed to create file: " << filename << std::endl;
+		}
+	}
 	void Pref::saveCSV(const std::string& filename, const UserPreferences& userPrefs) {
+		create_file_with_full_path(filename);
 		std::ofstream outFile(filename);
 		if (!outFile.is_open()) {
 			std::cerr << "Error opening file for writing." << std::endl;
@@ -340,6 +358,7 @@ public:
 
 	void Pref::simpleCSVsave(std::string& filename, double value) {
 		std::string fileout = getCommonPath() + filename;
+		std::filesystem::create_directories(fileout);
 		std::ofstream file(fileout);
 		if (!file.is_open()) {
 			std::cerr << "Failed to open the file." << std::endl;

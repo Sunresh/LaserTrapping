@@ -12,16 +12,15 @@ public:
 	Pref pr;
 	MainWindow() {
 		pr.startscreen();
-		MyDaq qq;
 		char key;
 		while (true) {
 			key = _getch();
 			if (key == 'a') {
-				qq.digitalOut(nullptr, "Dev2/port0/line0", 1);
+
 				break;
 			}
 			if (key == 's') {
-				qq.digitalOut(nullptr, "Dev2/port0/line0", 0);
+
 				break;
 			}
 			if (key == 'e' || key == 'E') {

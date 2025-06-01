@@ -1,16 +1,30 @@
-﻿project(Onemore)
+﻿set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+project(Onemore)
 
 set(OpenCV_DIR "${CMAKE_SOURCE_DIR}/opencv/build")
 find_package(OpenCV REQUIRED)
 
-find_library(NIDAQmx_LIBRARY NIDAQmx PATHS "C:/Program Files (x86)/National Instruments/Shared/ExternalCompilerSupport/C/lib64/msvc")
-include_directories("C:/Program Files (x86)/National Instruments/NI-DAQ/DAQmx ANSI C Dev/include")
 include_directories("C:/opencv/build/include")
-add_executable(${PROJECT_NAME}  "main.cpp" "preference.h" "depositionclass.h" "MainWindow.h" "brightnessclass.h" "daqanalog.h")
+add_executable(${PROJECT_NAME}  "main.cpp" "preference.h" "depositionclass.h" "MainWindow.h" "brightnessclass.h" )
 link_directories("C:/opencv/build/x64/v16/lib")
-target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS} ${NIDAQmx_LIBRARY} )
+target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS} )
 target_include_directories(${PROJECT_NAME} PRIVATE ${OpenCV_INCLUDE_DIRS})
 set(WITH_GSTREAMER OFF)
+
+
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "${CMAKE_SOURCE_DIR}/opencv/build/x64/vc16/bin/opencv_world4110.dll"
+    $<TARGET_FILE_DIR:${PROJECT_NAME}>
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "${CMAKE_SOURCE_DIR}/opencv/build/x64/vc16/bin/opencv_world4110d.dll"
+    $<TARGET_FILE_DIR:${PROJECT_NAME}>
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "${CMAKE_SOURCE_DIR}/opencv/build/x64/vc16/bin/opencv_videoio_ffmpeg4110_64.dll"
+    $<TARGET_FILE_DIR:${PROJECT_NAME}>
+)
 
 function(create_class class_name)
     set(HEADER_FILE ${class_name}.h)

@@ -2,12 +2,10 @@
 
 #include <iostream>
 #include <opencv2/opencv.hpp>
-#include <nidaqmx.h>
 #include <sstream>
 #include <fstream>
 #include "preference.h"
 #include "brightnessclass.h"
-#include "daqanalog.h"
 #include <windows.h>
 
 using namespace std;
@@ -15,9 +13,6 @@ using namespace std;
 class Deposition {
 private:
 	cv::VideoCapture cam;
-	MyDaq mydaq;
-	TaskHandle task1 = nullptr;
-	TaskHandle task2 = nullptr;
 	int fwidth;
 	int fheight;
 	double etime = 0;
@@ -45,11 +40,11 @@ public:
 		averagediff(0), 
 		cBR(0), cHT(0)
 	{
-		mydaq.start(nullptr, "Dev2/ao0", 0);
-		mydaq.start(nullptr, "Dev2/ao1", 0);
-		//mydaq.digitalOut(nullptr, "Dev2/port0/line0", 1);
+		std::string videoPath = "C:/Users/dayab/Documents/github/LaserTrapping/sample.mp4";
+		// Try to open the video with FFmpeg backend explicitly
+		//cv::VideoCapture cap(videoPath, cv::CAP_FFMPEG);
 		//cam.open(pr.getCameraId());
-		cam.open("C:\\Users\\nares\\Desktop\\LAB\\movie\\open\\five.mp4");
+		cam.open(videoPath);
 		double etime = 0;
 		double voltage = 0.0;
 		cv::Mat frame, dframe, grayColorRect, gRect;
@@ -168,13 +163,6 @@ public:
 			if (!cam.isOpened()) {
 				return;
 			}
-			DAQmxCreateTask("", &task1);
-			DAQmxCreateTask("", &task2);
-			DAQmxCreateAOVoltageChan(task1, pr.deva1(), "ao_channel", 0.0, 5.0, DAQmx_Val_Volts, nullptr);
-			DAQmxCreateAOVoltageChan(task2, pr.deva0(), "ao_channel", 0.0, 5.0, DAQmx_Val_Volts, nullptr);
-			DAQmxCfgSampClkTiming(task1, "", 10.0, DAQmx_Val_Rising, DAQmx_Val_ContSamps, 1);
-			DAQmxCfgSampClkTiming(task2, "", 10.0, DAQmx_Val_Rising, DAQmx_Val_ContSamps, 1);
-
 			auto startTime = std::chrono::high_resolution_clock::now();
 			cv::Mat fullScreenImage(fheight, fwidth, CV_8UC3, pr.uBGR(255, 255, 255));
 			setOutputFileName(pr.getCommonPath());
@@ -226,7 +214,6 @@ public:
 							isComplete = true;
 							voltage -= pr.maxVolt() / numSteps();
 							setEV(0);
-							mydaq.digitalOut(nullptr, "Dev2/port0/line0", 0);
 						}
 						writeContrastToCSV(pr.getCommonPath() + exportfile + ".csv", contrastData, pztValues, /*sdValues,*/ "BD", "PZT volt");
 					}
@@ -242,8 +229,6 @@ public:
 						}
 					}
 					double ev = getEV();
-					DAQmxWriteAnalogF64(task2, 1, true, 10.0, DAQmx_Val_GroupByChannel, &ev, nullptr, nullptr);
-					DAQmxWriteAnalogF64(task1, 1, true, 10.0, DAQmx_Val_GroupByChannel, &voltage, nullptr, nullptr);
 					setcurrentHeight(voltage);
 					mm.storeValue(voltage);
 					if (key == '9') {
@@ -264,8 +249,6 @@ public:
 					isComplete = true;
 					voltage -= pr.maxVolt() / (numSteps() * 0.1);
 					setEV(0);
-					mydaq.start(nullptr, "Dev2/ao0", 0);
-					mydaq.digitalOut(nullptr, "Dev2/port0/line0", 0);
 					if (voltage < 0) {
 						cam.release();
 						cv::destroyAllWindows();
@@ -273,8 +256,6 @@ public:
 					}
 				}
 			}
-			DAQmxClearTask(task1);
-			DAQmxClearTask(task2);
 		}
 		catch (const std::exception& e) {
 			std::cerr << "\nAn exception occurred by Naresh: \n" << e.what() << "\n\n" << std::endl;
